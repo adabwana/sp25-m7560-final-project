@@ -10,6 +10,7 @@
 
 *.csv
 !data/raw/*
+!data/predictions/old/*
 !*_engineered.csv
 *.rds
 
