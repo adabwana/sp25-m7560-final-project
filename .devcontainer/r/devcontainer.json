@@ -16,21 +16,19 @@
         "terminal.integrated.defaultProfile.linux": "bash",
         "terminal.integrated.profiles.linux": {
           "bash": {
-          "path": "/bin/bash"
-        }
+            "path": "/bin/bash"
+          }
         }
       }
     }
-    },
-    // User configuration
-    "remoteUser": "vscode",
-    "updateRemoteUserUID": true,
-
+  },
+  // User configuration
+  "remoteUser": "vscode",
+  "updateRemoteUserUID": true,
   // Allow GPU
   "hostRequirements": {
     "gpu": "optional"
   },
-
   // Container runtime arguments
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}"
 }

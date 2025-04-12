@@ -4,62 +4,60 @@
     "../../docker-compose.yml"
   ],
   "service": "latex",
-    // VS Code specific settings
-    "customizations": {
-      "vscode": {
-        "extensions": [
-          "James-Yu.latex-workshop",
-          "yzhang.markdown-all-in-one",
-          "DavidAnson.vscode-markdownlint",
-          "streetsidesoftware.code-spell-checker",
-          "tomoki1207.pdf"
+  // VS Code specific settings
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "James-Yu.latex-workshop",
+        "yzhang.markdown-all-in-one",
+        "DavidAnson.vscode-markdownlint",
+        "streetsidesoftware.code-spell-checker",
+        "tomoki1207.pdf"
+      ],
+      "settings": {
+        "latex-workshop.latex.autoBuild.run": "onSave",
+        "latex-workshop.latex.autoClean.run": "onBuilt",
+        "latex-workshop.view.pdf.viewer": "tab",
+        "latex-workshop.latex.clean.fileTypes": [
+          "*.aux",
+          "*.bbl",
+          "*.blg",
+          "*.idx",
+          "*.ind",
+          "*.lof",
+          "*.lot",
+          "*.out",
+          "*.toc",
+          "*.acn",
+          "*.acr",
+          "*.alg",
+          "*.glg",
+          "*.glo",
+          "*.gls",
+          "*.ist",
+          "*.fls",
+          "*.log",
+          "*.synctex.gz",
+          "*.snm",
+          "*.nav",
+          "*.fdb_latexmk"
         ],
-        "settings": {
-          "latex-workshop.latex.autoBuild.run": "onSave",
-          "latex-workshop.latex.autoClean.run": "onBuilt",
-          "latex-workshop.view.pdf.viewer": "tab",        
-          "latex-workshop.latex.clean.fileTypes": [
-                  "*.aux",
-                  "*.bbl",
-                  "*.blg",
-                  "*.idx",
-                  "*.ind",
-                  "*.lof",
-                  "*.lot",
-                  "*.out",
-                  "*.toc",
-                  "*.acn",
-                  "*.acr",
-                  "*.alg",
-                  "*.glg",
-                  "*.glo",
-                  "*.gls",
-                  "*.ist",
-                  "*.fls",
-                  "*.log",
-                  "*.synctex.gz",
-                  "*.snm",
-                  "*.nav",
-                  "*.fdb_latexmk"
-              ],
-              "terminal.integrated.defaultProfile.linux": "bash",
-              "terminal.integrated.profiles.linux": {
-                  "bash": {
-                      "path": "/bin/bash"
-                  }
-              }
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "terminal.integrated.profiles.linux": {
+          "bash": {
+            "path": "/bin/bash"
           }
+        }
       }
+    }
   },
   // User configuration
   "remoteUser": "vscode",
   "updateRemoteUserUID": true,
-  
   // Allow GPU
   "hostRequirements": {
     "gpu": "optional"
   },
-
   // Container runtime arguments
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}"
 }

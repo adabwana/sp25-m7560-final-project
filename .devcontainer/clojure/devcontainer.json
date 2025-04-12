@@ -26,18 +26,14 @@
         }
     },
     "forwardPorts": [],
-
     // User configuration
     "remoteUser": "vscode",
     "updateRemoteUserUID": true,
-
     // Allow GPU
     "hostRequirements": {
         "gpu": "optional"
     },
-
     // Container runtime arguments
     "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
-
     "postCreateCommand": "echo 'export DISPLAY=host.docker.internal:0' >> ~/.bashrc && quarto check install"
 }
