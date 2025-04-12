@@ -11,15 +11,15 @@
                 "ms-toolsai.jupyter",
                 "ms-python.vscode-pylance",
                 "ms-toolsai.datawrangler"
-            ]
-        },
-        "settings": {
-            "editor.formatOnSave": true,
-            "terminal.integrated.defaultProfile.linux": "bash",
-            "terminal.integrated.profiles.linux": {
+            ],
+            "settings": {
+                "editor.formatOnSave": true,
+                "terminal.integrated.defaultProfile.linux": "bash",
+                "terminal.integrated.profiles.linux": {
               "bash": {
                 "path": "/bin/bash"
               }
+            }
             }
         }
     },

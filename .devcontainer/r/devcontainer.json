@@ -10,21 +10,21 @@
         "REditorSupport.r",
         "RDebugger.r-debugger",
         "ms-toolsai.datawrangler"
-      ]
-    },
-    "settings": {
-      "editor.formatOnSave": true,
-      "terminal.integrated.defaultProfile.linux": "bash",
-      "terminal.integrated.profiles.linux": {
-        "bash": {
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "terminal.integrated.profiles.linux": {
+          "bash": {
           "path": "/bin/bash"
+        }
         }
       }
     }
-  },
-  // User configuration
-  "remoteUser": "vscode",
-  "updateRemoteUserUID": true,
+    },
+    // User configuration
+    "remoteUser": "vscode",
+    "updateRemoteUserUID": true,
 
   // Allow GPU
   "hostRequirements": {
