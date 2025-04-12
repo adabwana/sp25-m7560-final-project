@@ -1,0 +1,44 @@
+{
+    "name": "clojure dev",
+    "dockerComposeFile": [
+        "../../docker-compose.yml",
+        "../docker-compose.dev.yml"
+    ],
+    "service": "clojure",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "betterthantomorrow.calva",
+                "shaunlebron.vscode-parinfer"
+            ],
+            "settings": {
+                "[clojure]": {
+                    "editor.formatOnType": true,
+                    "editor.formatOnSave": true
+                },
+                "calva.paredit.defaultKeyMap": "original",
+                "terminal.integrated.defaultProfile.linux": "bash",
+                "terminal.integrated.profiles.linux": {
+                    "bash": {
+                        "path": "/bin/bash"
+                    }
+                }
+            }
+        }
+    },
+    "forwardPorts": [],
+
+    // User configuration
+    "remoteUser": "vscode",
+    "updateRemoteUserUID": true,
+
+    // Allow GPU
+    "hostRequirements": {
+        "gpu": "optional"
+    },
+
+    // Container runtime arguments
+    "workspaceFolder": "/workspaces",
+
+    "postCreateCommand": "echo 'export DISPLAY=host.docker.internal:0' >> ~/.bashrc && quarto check install"
+}

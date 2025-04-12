@@ -1,0 +1,10 @@
+{
+ :remote-repo {:git-url "https://github.com/adabwana/sp25-m7560-final-project" :branch "master"}
+;;  :subdirs-to-sync ["notebooks" "data" "images"]
+ :run-quarto true
+ :quarto {:highlight-style :atom-one ;:gruvbox
+          :format
+          {:html {:toc true
+                  :toc-depth 3
+                  :theme :united ; :journal
+                  :number-sections false}}}}

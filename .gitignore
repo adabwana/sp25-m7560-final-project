@@ -1,0 +1,53 @@
+# Yes, but not
+.*
+!.awareness/
+!.devcontainer/
+!.gitignore
+
+*.csv
+!data/raw/*
+!*_ext.csv
+
+# Development environment
+*.db
+archive/
+mlruns/
+mlartifacts/
+results/
+
+models/final/
+
+# Language specific
+src/clojure/
+docs/
+Rplots.pdf
+*.pyc
+.RData
+.Rhistory
+.cpcache/
+.nrepl-port
+
+# LaTeX
+*long*
+*.aux
+*.log
+*.out
+*.toc
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.nav
+*.snm
+*.vrb
+*.synctex.gz
+*(busy)
+
+*.pdf
+!data_flow.pdf
+!model_building.pdf
+!Presentation.pdf
+!presentation/images/eda/dist_*
+
+xxx*
+prompts/

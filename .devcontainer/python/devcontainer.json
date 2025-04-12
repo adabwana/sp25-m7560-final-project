@@ -1,0 +1,40 @@
+{
+    "name": "python dev",
+    "dockerComposeFile": [
+        "../../docker-compose.yml",
+        "../docker-compose.dev.yml"
+    ],
+    "service": "python",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python",
+                "ms-toolsai.jupyter",
+                "ms-python.vscode-pylance",
+                "ms-toolsai.datawrangler"
+            ]
+        },
+        "settings": {
+            "editor.formatOnSave": true,
+            "terminal.integrated.defaultProfile.linux": "bash",
+            "terminal.integrated.profiles.linux": {
+              "bash": {
+                "path": "/bin/bash"
+              }
+            }
+        }
+    },
+    // User configuration
+    "remoteUser": "vscode",
+    "updateRemoteUserUID": true,
+
+    // Allow GPU
+    "hostRequirements": {
+        "gpu": "optional"
+    },
+    
+    "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+    // Use file-based storage (first) OR SQLite DB storage (second)
+    // "postCreateCommand": "mlflow server --host 127.0.0.1 --port 5000 --backend-store-uri file:/workspaces/${localWorkspaceFolderBasename}/.mlruns --default-artifact-root file:/workspaces/${localWorkspaceFolderBasename}/.mlartifacts"
+    "postCreateCommand": "mlflow server --host 127.0.0.1 --port 5000 --backend-store-uri sqlite:////workspaces/${localWorkspaceFolderBasename}/.mlflow.db --default-artifact-root file:/workspaces/${localWorkspaceFolderBasename}/.mlartifacts"
+}

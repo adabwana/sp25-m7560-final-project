@@ -1,0 +1,10 @@
+numpy
+pandas
+matplotlib
+plotly
+seaborn
+scipy
+scikit-learn
+statsmodels
+mlflow
+ipykernel

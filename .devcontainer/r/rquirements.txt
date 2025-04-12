@@ -1,0 +1,25 @@
+# Data manipulation and tidyverse ecosystem
+# tidyverse
+# tidyr
+lubridate
+dplyr
+readr
+
+# Weather and moon
+lunar
+openmeteo
+
+# Data exploration and visualization
+ggplot2
+DataExplorer
+skimr
+fitdistrplus
+GGally
+
+# Statistics and modeling
+broom
+caret
+
+# Data import/export
+here
+jsonlite

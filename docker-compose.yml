@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  r:
+    build:
+      context: ./.devcontainer/r
+      dockerfile: r.Dockerfile
+    volumes:
+      - .:/workspaces:cached
+    command: sleep infinity
+
+  python:
+    build:
+      context: ./.devcontainer/python
+      dockerfile: python.Dockerfile
+    volumes:
+      - .:/workspaces:cached
+    command: sleep infinity
+
+  clojure:
+    build:
+      context: ./.devcontainer/clojure
+      dockerfile: clojure.Dockerfile
+    volumes:
+      - .:/workspaces:cached
+    command: sleep infinity
+
+  latex:
+    build:
+      context: ./.devcontainer/latex
+      dockerfile: latex.Dockerfile
+    volumes:
+      - .:/workspaces:cached
+    command: sleep infinity
+
+networks:
+  default:
+    name: my_network
