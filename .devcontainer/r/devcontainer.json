@@ -1,8 +1,7 @@
 {
   "name": "r dev",
   "dockerComposeFile": [
-    "../../docker-compose.yml",
-    "../docker-compose.dev.yml"
+    "../../docker-compose.yml"
   ],
   "service": "r",
   "customizations": {

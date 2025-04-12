@@ -62,4 +62,4 @@ USER $USERNAME
 # ENV NVIDIA_VISIBLE_DEVICES=all
 # ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
 
-WORKDIR /workspaces/${localWorkspaceFolderBasename}
+WORKDIR /workspaces

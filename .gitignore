@@ -1,8 +1,12 @@
 # Yes, but not
 .*
 !.awareness/
+!.cursor/
 !.devcontainer/
 !.gitignore
+
+# DONT DO THIS TYPICALLY
+!.env
 
 *.csv
 !data/raw/*

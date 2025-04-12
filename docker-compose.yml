@@ -5,33 +5,71 @@ services:
     build:
       context: ./.devcontainer/r
       dockerfile: r.Dockerfile
+    container_name: m7560-r-dev
     volumes:
-      - .:/workspaces:cached
+      - .:/workspaces/${WKSP_FOLDER:-default_project}:cached
+    working_dir: /workspaces/${WKSP_FOLDER:-default_project}
+    environment:
+      - R_LIBS_USER=/workspaces/.r/library
+      - RENV_PATHS_CACHE=/workspaces/.r/cache
     command: sleep infinity
+    healthcheck:
+      test: ["CMD", "bash", "-c", "ps aux | grep sleep | grep -v grep"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   python:
     build:
       context: ./.devcontainer/python
       dockerfile: python.Dockerfile
+    container_name: m7560-python-dev
     volumes:
-      - .:/workspaces:cached
+      - .:/workspaces/${WKSP_FOLDER:-default_project}:cached
+    working_dir: /workspaces/${WKSP_FOLDER:-default_project}
+    environment:
+      - PYTHONPATH=/workspaces/${WKSP_FOLDER:-default_project}/src/python
+      - JUPYTER_PATH=/workspaces/${WKSP_FOLDER:-default_project}/notebooks
     command: sleep infinity
+    healthcheck:
+      test: ["CMD", "bash", "-c", "ps aux | grep sleep | grep -v grep"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   clojure:
     build:
       context: ./.devcontainer/clojure
       dockerfile: clojure.Dockerfile
+    container_name: m7560-clojure-dev
     volumes:
-      - .:/workspaces:cached
+      - .:/workspaces/${WKSP_FOLDER:-default_project}:cached
+    working_dir: /workspaces/${WKSP_FOLDER:-default_project}
+    environment:
+      - CLOJURE_DEPS=/workspaces/${WKSP_FOLDER:-default_project}/deps.edn
     command: sleep infinity
+    healthcheck:
+      test: ["CMD", "bash", "-c", "ps aux | grep sleep | grep -v grep"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   latex:
     build:
       context: ./.devcontainer/latex
       dockerfile: latex.Dockerfile
+    container_name: m7560-latex-dev
     volumes:
-      - .:/workspaces:cached
+      - .:/workspaces/${WKSP_FOLDER:-default_project}:cached
+    working_dir: /workspaces/${WKSP_FOLDER:-default_project}
+    environment:
+      - TEXMFHOME=/workspaces/.texmf
     command: sleep infinity
+    healthcheck:
+      test: ["CMD", "bash", "-c", "ps aux | grep sleep | grep -v grep"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 networks:
   default:
