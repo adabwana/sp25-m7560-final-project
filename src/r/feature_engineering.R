@@ -491,8 +491,8 @@ data_raw_test <- readr::read_csv(here("data", "raw", "LC_test.csv"))
 lc_engineered_train <- engineer_features(data_raw_train)
 lc_engineered_test <- engineer_features(data_raw_test)
 
-readr::write_csv(lc_engineered_train, here("data", "processed", "train_engineered.csv"))
-readr::write_csv(lc_engineered_test, here("data", "processed", "test_engineered.csv"))
+readr::write_csv(lc_engineered_train, here("data", "processed", "xxxtrain_engineered.csv"))
+readr::write_csv(lc_engineered_test, here("data", "processed", "xxxtest_engineered.csv"))
 
 # View(lc_engineered_test)
 

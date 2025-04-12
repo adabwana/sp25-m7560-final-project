@@ -8,8 +8,8 @@ library(hms) # Required for hms::as_hms
 
 # Read the engineered data
 # Using show_col_types = FALSE to suppress messages in console
-train_engineered <- readr::read_csv(here("data", "processed", "train_engineered.csv"), show_col_types = FALSE)
-test_engineered <- readr::read_csv(here("data", "processed", "test_engineered.csv"), show_col_types = FALSE)
+train_engineered <- readr::read_csv(here("data", "processed", "xxxtrain_engineered.csv"), show_col_types = FALSE)
+test_engineered <- readr::read_csv(here("data", "processed", "xxxtest_engineered.csv"), show_col_types = FALSE)
 
 # Add origin identifier and combine
 train_engineered <- train_engineered %>% mutate(origin = "train")
@@ -115,7 +115,7 @@ test_eng_ext <- data_full_ext %>% filter(origin == "test") %>% select(-origin)
 dir.create(here("data", "processed"), recursive = TRUE, showWarnings = FALSE)
 
 # Save the results
-readr::write_csv(train_eng_ext, here("data", "processed", "train_eng_ext.csv"))
-readr::write_csv(test_eng_ext, here("data", "processed", "test_eng_ext.csv"))
+readr::write_csv(train_eng_ext, here("data", "processed", "train_engineered.csv"))
+readr::write_csv(test_eng_ext, here("data", "processed", "test_engineered.csv"))
 
 print("External data (moon phase and weather) added and saved to train_eng_ext.csv and test_eng_ext.csv")
