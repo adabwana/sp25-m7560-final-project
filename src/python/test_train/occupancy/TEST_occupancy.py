@@ -6,7 +6,7 @@ import mlflow
 import matplotlib.pyplot as plt
 
 # Local imports
-project_root = '/workspace'
+project_root = '/workspaces/sp25-m7560-final-project'
 sys.path.append(project_root)
 
 from src.python.utils.preprocess import prepare_data

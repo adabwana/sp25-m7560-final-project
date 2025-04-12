@@ -1,9 +1,9 @@
 import numpy as np
-from sklearn.linear_model import Ridge, Lasso, ElasticNet
-from sklearn.neighbors import KNeighborsRegressor
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import SplineTransformer, FunctionTransformer
 from sklearn.base import BaseEstimator, RegressorMixin, clone
+from sklearn.ensemble import RandomForestRegressor
+from xgboost import XGBRegressor
+from pyearth import Earth as MARS
 
 # =============================================================================
 # CUSTOM REGRESSOR WRAPPER FOR COUNT PREDICTIONS
@@ -37,53 +37,23 @@ class RoundedRegressor(BaseEstimator, RegressorMixin):
 # =============================================================================
 def get_model_definitions():
     return {
-        'Ridge': (RoundedRegressor(Ridge()), {
-            'model__estimator__alpha': np.logspace(0, 2, 10),
-            'select_features__k': np.arange(70, 100, 10),
-        }),
-        'Lasso': (RoundedRegressor(Lasso()), {
-            'model__estimator__alpha': np.logspace(-2, 0, 10),
-            'select_features__k': np.arange(70, 100, 10),
-        }),
-        # 'ElasticNet': (RoundedRegressor(ElasticNet()), {
-        #     'model__estimator__alpha': np.logspace(-3, -1, 10),
-        #     'model__estimator__l1_ratio': np.linspace(0.1, 0.9, 5),
-        #     'select_features__k': np.arange(70, 100, 10),
-        # }),
-        'PenalizedSplines': (RoundedRegressor(Pipeline([
-            ('spline', SplineTransformer()),
-            ('ridge', Ridge())
+        'MARS': (RoundedRegressor(Pipeline([
+            ('mars', MARS())
         ])), {
-            'model__estimator__spline__n_knots': [9, 11, 13, 15],
-            'model__estimator__spline__degree': [3],
-            'model__estimator__ridge__alpha': np.logspace(0, 2, 20),
+            'model__estimator__mars__max_terms': [10, 20, 30],
+            'model__estimator__mars__max_degree': [1, 2],
             'select_features__k': np.arange(70, 100, 10),
         }),
-        'KNN': (RoundedRegressor(KNeighborsRegressor()), {
-            'model__estimator__n_neighbors': np.arange(15, 22, 2),  # Creates [15, 17, 19, 21]
-            'model__estimator__weights': ['uniform', 'distance'],
-            # 'model__estimator__metric': ['euclidean', 'manhattan'],
+        'RandomForest': (RoundedRegressor(RandomForestRegressor()), {
+            'model__estimator__n_estimators': [100, 200],
+            'model__estimator__max_depth': [10, 20, None],
+            'model__estimator__min_samples_split': [2, 5],
             'select_features__k': np.arange(70, 100, 10),
         }),
-        'PenalizedPoisson': (RoundedRegressor(Pipeline([
-            ('log_link', FunctionTransformer(
-                func=lambda x: np.log(np.clip(x, 1e-10, None)),  # Log link (canonical for Poisson)
-                inverse_func=lambda x: np.exp(np.clip(x, -10, 10))
-            )),
-            ('ridge', Ridge())
-        ])), {
-            'model__estimator__ridge__alpha': np.logspace(0, 2, 20),
-            'select_features__k': np.arange(70, 100, 10),
-        }),
-        'PenalizedWeibull': (RoundedRegressor(Pipeline([
-            ('weibull_link', FunctionTransformer(
-                func=lambda x: np.log(-np.log(1 - np.clip(x / (x.max() + 1), 1e-10, 1-1e-10))),
-                inverse_func=lambda x: (1 - np.exp(-np.exp(np.clip(x, -10, 10)))) * (x.max() + 1),
-                check_inverse=False
-            )),
-            ('ridge', Ridge())
-        ])), {
-            'model__estimator__ridge__alpha': np.logspace(0, 2, 20),
+        'XGBoost': (RoundedRegressor(XGBRegressor()), {
+            'model__estimator__n_estimators': [100, 200],
+            'model__estimator__max_depth': [3, 6, 9],
+            'model__estimator__learning_rate': [0.01, 0.1],
             'select_features__k': np.arange(70, 100, 10),
         }),
     } 

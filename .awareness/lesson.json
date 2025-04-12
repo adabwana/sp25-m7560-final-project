@@ -1,0 +1,95 @@
+[
+    {
+        "id": "LESSON_TUNING_NAN_METRICS_001",
+        "type": "Lesson",
+        "name": "NaN Metrics in tune::tune_grid with Small Data/Folds",
+        "problem_pattern": {
+            "description": "tune::tune_grid produces NaN values for metrics like R-squared (rsq) when cross-validation folds contain assessment sets with zero variance in the outcome variable.",
+            "error_messages": [
+                "NaN produced",
+                "Error in `.filter_perf_metrics(x, metric, eval_time)`: No results are available. Please use `collect_metrics()`... (when calling select_best)"
+            ],
+            "context": "Running testthat tests for tidymodels tuning functions (`tune_model_grid`, `select_best_hyperparameters`) using very small sample data (e.g., <10 rows) and low number of CV folds (e.g., v=2)."
+        },
+        "solution": {
+            "steps": [
+                "Increase the size of the sample data used for testing, ensuring sufficient data points and outcome variance within each cross-validation fold.",
+                "Example: Replicate the original small sample data multiple times using `dplyr::bind_rows(replicate(n, small_data, simplify = FALSE))`.",
+                "Optionally add minor random noise to the outcome variable in the test data to further ensure variance: `mutate(outcome = outcome + rnorm(n(), 0, small_sd))`."
+            ],
+            "verification": "Re-running the testthat tests results in valid numeric values for all calculated metrics, and `tune::select_best()` works correctly for all metrics."
+        },
+        "environment": {
+            "packages": [
+                "tune",
+                "rsample",
+                "yardstick",
+                "testthat",
+                "dplyr"
+            ],
+            "r_version": "(not specified, likely general)",
+            "os": "(not specified, likely general)"
+        },
+        "metadata": {
+            "creation_date": "2024-07-26T14:00:00Z",
+            "last_updated_date": "2024-07-26T14:00:00Z",
+            "tags": [
+                "tidymodels",
+                "tune",
+                "testthat",
+                "cross-validation",
+                "NaN",
+                "rsq"
+            ]
+        }
+    },
+    {
+        "id": "LESSON_TESTING_FINALIZED_PARAMS_001",
+        "type": "Lesson",
+        "name": "Verifying Finalized Hyperparameters in Fitted Workflows Tests",
+        "problem_pattern": {
+            "description": "Tests checking hyperparameter values directly within the `$args` of a model specification extracted (`extract_spec_parsnip`) from a *fitted* workflow object (`parsnip::fit`) may fail because the stored spec args might not reflect the values used during the fit.",
+            "error_messages": [
+                "finalized_spec$args$param not equal to best_params$param",
+                "parsnip_fit$spec$args$param not equal to best_params$param"
+            ],
+            "context": "Writing testthat tests for a function that finalizes and fits a tidymodels workflow (`finalize_workflow()` then `fit()`). Attempting to verify that the hyperparameters were correctly passed by inspecting the spec object within the returned fitted workflow."
+        },
+        "solution": {
+            "steps": [
+                "Avoid directly testing the equality of `$args` values in the spec extracted from the *fitted* workflow.",
+                "Instead, test the finalization step separately: Call `finalize_workflow()` explicitly and check the `$args` in the spec of the *returned finalized-but-not-fitted* workflow.",
+                "For the function that performs the fit (`train_final_model`):",
+                "  - Test that the function returns a workflow object (`is_workflow()`).",
+                "  - Test that the returned workflow is marked as trained (`fitted_model$trained == TRUE`).",
+                "  - Test that the trained recipe can be extracted without error (`expect_no_error(extract_recipe(fitted_model, estimated = TRUE))`).",
+                "  - (Recommended Addition): Test that the fitted workflow can make predictions without error (`expect_no_error(predict(fitted_model, new_data = ...))`).",
+                "  - (Optional/Engine-Specific): If necessary, check parameters in the underlying fitted engine object (`extract_fit_engine()`), acknowledging this is less general."
+            ],
+            "verification": "Tests focusing on the state *before* fitting (for finalization) and the usability/state *after* fitting (for the fitting function) pass reliably."
+        },
+        "environment": {
+            "packages": [
+                "workflows",
+                "tune",
+                "parsnip",
+                "testthat",
+                "rlang"
+            ],
+            "r_version": "(not specified, likely general)",
+            "os": "(not specified, likely general)"
+        },
+        "metadata": {
+            "creation_date": "2024-07-26T14:05:00Z",
+            "last_updated_date": "2024-07-26T14:05:00Z",
+            "tags": [
+                "tidymodels",
+                "workflows",
+                "finalize_workflow",
+                "fit",
+                "testthat",
+                "hyperparameters"
+            ]
+        }
+    }
+]

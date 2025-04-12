@@ -1,5 +1,5 @@
-FROM rocker/r-ver:latest
-# FROM r-base:latest
+# Stage 1: Build and cache R packages
+FROM rocker/r-ver:latest AS package-builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     sudo \
@@ -19,19 +19,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Install renv, essential R packages, and setup cache directory
+# Install renv and setup cache directory
 # https://stackoverflow.com/questions/52284345/how-to-show-r-graph-from-visual-studio-code
 ENV RENV_PATHS_CACHE=/workspaces/.r/cache
 RUN mkdir -p /workspaces/.r/cache && \
-    # chown -R $USERNAME:$USER_GID /workspaces && \
-    # Install renv and other essential packages first
     R -e "options(Ncpus = parallel::detectCores()-1); install.packages(c('renv', 'httpgd', 'languageserver'), repos='https://cloud.r-project.org/')"
 
-# Copy requirements file
+# Copy requirements file early to leverage caching
 COPY rquirements.txt /tmp/rquirements.txt
 
 # Install packages from requirements file using renv
-# This leverages renv's caching mechanism specified by RENV_PATHS_CACHE
 RUN Rscript -e ' \
     options(Ncpus = parallel::detectCores()-1); \
     print(paste("Using RENV_PATHS_CACHE:", Sys.getenv("RENV_PATHS_CACHE"))); \
@@ -39,12 +36,40 @@ RUN Rscript -e ' \
     pkg <- pkg[!grepl("^#", pkg) & pkg != ""]; \
     if (length(pkg) > 0) { \
         print(paste("Installing packages:", paste(pkg, collapse=", "))); \
-        # Use renv::install for installation and caching \
         renv::install(pkg, repos="https://cloud.r-project.org/"); \
     } else { \
         print("No packages to install from rquirements.txt"); \
     } \
     '
+
+# Stage 2: Final image
+FROM rocker/r-ver:latest
+
+# Copy cached packages and environment from package-builder stage
+COPY --from=package-builder /workspaces/.r/cache /workspaces/.r/cache
+COPY --from=package-builder /usr/local/lib/R/site-library /usr/local/lib/R/site-library
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    sudo \
+    git \
+    ca-certificates \
+    libcurl4-openssl-dev \
+    libssl-dev \
+    libxml2-dev \
+    libfontconfig1-dev \
+    libharfbuzz-dev \
+    libfribidi-dev \
+    libfreetype6-dev \
+    libpng-dev \
+    libtiff5-dev \
+    libjpeg-dev \
+    libgit2-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set environment variable for renv cache
+ENV RENV_PATHS_CACHE=/workspaces/.r/cache
+
 # Create non-root user
 ARG USERNAME=vscode
 ARG USER_UID=1000

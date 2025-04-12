@@ -1,10 +1,19 @@
+# data stuff
 numpy
 pandas
+
+# plotting
 matplotlib
 plotly
 seaborn
 scipy
+
+# machine learning
 scikit-learn
+xgboost
+pyearth
 statsmodels
+
+# utils
 mlflow
 ipykernel

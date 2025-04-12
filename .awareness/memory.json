@@ -1,0 +1,503 @@
+{
+    "entities": [
+        {
+            "id": "R_MLOps_Project",
+            "type": "Project",
+            "name": "R MLOps Project"
+        },
+        {
+            "id": "Tidymodels_Framework",
+            "type": "Framework",
+            "name": "Tidymodels"
+        },
+        {
+            "id": "TDD_Approach",
+            "type": "Methodology",
+            "name": "Test-Driven Development"
+        },
+        {
+            "id": "Data_Handling",
+            "type": "Task",
+            "name": "Data Loading and Splitting"
+        },
+        {
+            "id": "testthat",
+            "type": "Tool",
+            "name": "testthat Package"
+        },
+        {
+            "id": "Feature_Engineering",
+            "type": "Task",
+            "name": "Feature Engineering (Recipe)"
+        },
+        {
+            "id": "Model_Specification",
+            "type": "Task",
+            "name": "Model Specification"
+        },
+        {
+            "id": "Workflow_Construction",
+            "type": "Task",
+            "name": "Workflow Construction"
+        },
+        {
+            "id": "Hyperparameter_Tuning",
+            "type": "Task",
+            "name": "Hyperparameter Tuning"
+        },
+        {
+            "id": "Model_Training",
+            "type": "Task",
+            "name": "Model Training (Final)"
+        },
+        {
+            "id": "Evaluation",
+            "type": "Task",
+            "name": "Evaluation"
+        },
+        {
+            "id": "Pipeline_Orchestration",
+            "type": "Task",
+            "name": "Pipeline Orchestration"
+        },
+        {
+            "id": "Refinement_Standards",
+            "type": "Task",
+            "name": "Refinement and Standards"
+        }
+    ],
+    "relations": [
+        {
+            "source": "R_MLOps_Project",
+            "target": "Tidymodels_Framework",
+            "type": "uses"
+        },
+        {
+            "source": "R_MLOps_Project",
+            "target": "TDD_Approach",
+            "type": "uses"
+        },
+        {
+            "source": "TDD_Approach",
+            "target": "testthat",
+            "type": "implemented_with"
+        },
+        {
+            "source": "Data_Handling",
+            "target": "R_MLOps_Project",
+            "type": "part_of_phase_1_for"
+        },
+        {
+            "source": "Data_Handling",
+            "target": "TDD_Approach",
+            "type": "developed_using"
+        },
+        {
+            "source": "Feature_Engineering",
+            "target": "Data_Handling",
+            "type": "follows"
+        },
+        {
+            "source": "Feature_Engineering",
+            "target": "R_MLOps_Project",
+            "type": "part_of_phase_1_for"
+        },
+        {
+            "source": "Feature_Engineering",
+            "target": "TDD_Approach",
+            "type": "developed_using"
+        },
+        {
+            "source": "Model_Specification",
+            "target": "Feature_Engineering",
+            "type": "follows"
+        },
+        {
+            "source": "Model_Specification",
+            "target": "R_MLOps_Project",
+            "type": "part_of_phase_2_for"
+        },
+        {
+            "source": "Model_Specification",
+            "target": "TDD_Approach",
+            "type": "developed_using"
+        },
+        {
+            "source": "Workflow_Construction",
+            "target": "Model_Specification",
+            "type": "follows"
+        },
+        {
+            "source": "Workflow_Construction",
+            "target": "R_MLOps_Project",
+            "type": "part_of_phase_2_for"
+        },
+        {
+            "source": "Workflow_Construction",
+            "target": "TDD_Approach",
+            "type": "developed_using"
+        },
+        {
+            "source": "Hyperparameter_Tuning",
+            "target": "Workflow_Construction",
+            "type": "follows"
+        },
+        {
+            "source": "Hyperparameter_Tuning",
+            "target": "R_MLOps_Project",
+            "type": "part_of_phase_2_for"
+        },
+        {
+            "source": "Hyperparameter_Tuning",
+            "target": "TDD_Approach",
+            "type": "developed_using"
+        },
+        {
+            "source": "Model_Training",
+            "target": "Hyperparameter_Tuning",
+            "type": "follows"
+        },
+        {
+            "source": "Model_Training",
+            "target": "R_MLOps_Project",
+            "type": "part_of_phase_3_for"
+        },
+        {
+            "source": "Model_Training",
+            "target": "TDD_Approach",
+            "type": "developed_using"
+        },
+        {
+            "source": "Evaluation",
+            "target": "Model_Training",
+            "type": "follows"
+        },
+        {
+            "source": "Evaluation",
+            "target": "R_MLOps_Project",
+            "type": "part_of_phase_3_for"
+        },
+        {
+            "source": "Evaluation",
+            "target": "TDD_Approach",
+            "type": "developed_using"
+        },
+        {
+            "source": "Pipeline_Orchestration",
+            "target": "Evaluation",
+            "type": "follows"
+        },
+        {
+            "source": "Pipeline_Orchestration",
+            "target": "R_MLOps_Project",
+            "type": "part_of_phase_3_for"
+        },
+        {
+            "source": "Refinement_Standards",
+            "target": "Pipeline_Orchestration",
+            "type": "follows"
+        },
+        {
+            "source": "Refinement_Standards",
+            "target": "R_MLOps_Project",
+            "type": "part_of_phase_4_for"
+        }
+    ],
+    "observations": [
+        {
+            "entity_id": "R_MLOps_Project",
+            "attribute": "goal",
+            "value": "Build robust R pipeline mirroring Python implementation"
+        },
+        {
+            "entity_id": "TDD_Approach",
+            "attribute": "description",
+            "value": "Write tests before implementation for each component"
+        },
+        {
+            "entity_id": "Data_Handling",
+            "attribute": "task_details",
+            "value": "Create load_data() function in src/r/utils/data_utils.R"
+        },
+        {
+            "entity_id": "Data_Handling",
+            "attribute": "implementation_file",
+            "value": "src/r/utils/data_utils.R"
+        },
+        {
+            "entity_id": "Data_Handling",
+            "attribute": "testing_file",
+            "value": "tests/testthat/test-data_utils.R"
+        },
+        {
+            "entity_id": "Data_Handling",
+            "attribute": "tool_used",
+            "value": "readr::read_csv, here::here"
+        },
+        {
+            "entity_id": "Data_Handling",
+            "attribute": "status",
+            "value": "Completed"
+        },
+        {
+            "entity_id": "Data_Handling",
+            "attribute": "verification_method",
+            "value": "testthat tests passed"
+        },
+        {
+            "entity_id": "Data_Handling",
+            "attribute": "verification_timestamp",
+            "value": "2024-07-26T12:00:00Z"
+        },
+        {
+            "entity_id": "Feature_Engineering",
+            "attribute": "status",
+            "value": "Completed"
+        },
+        {
+            "entity_id": "Feature_Engineering",
+            "attribute": "task_details",
+            "value": "Create create_recipe() function in src/r/recipes/recipes.R using tidymodels::recipes, mimicking python preprocess.py logic (dropping columns, time conversion, dummy vars, ZV, normalization)."
+        },
+        {
+            "entity_id": "Feature_Engineering",
+            "attribute": "implementation_file",
+            "value": "src/r/recipes/recipes.R"
+        },
+        {
+            "entity_id": "Feature_Engineering",
+            "attribute": "testing_file",
+            "value": "tests/testthat/test-recipes.R"
+        },
+        {
+            "entity_id": "Feature_Engineering",
+            "attribute": "tool_used",
+            "value": "recipes, lubridate, dplyr, rlang"
+        },
+        {
+            "entity_id": "Feature_Engineering",
+            "attribute": "verification_method",
+            "value": "testthat tests passed (with deprecation warning)"
+        },
+        {
+            "entity_id": "Feature_Engineering",
+            "attribute": "verification_timestamp",
+            "value": "2024-07-26T12:15:00Z"
+        },
+        {
+            "entity_id": "Feature_Engineering",
+            "attribute": "follow_up_action",
+            "value": "Refactor step_mutate to avoid deprecated dplyr::cur_data() usage."
+        },
+        {
+            "entity_id": "Model_Specification",
+            "attribute": "status",
+            "value": "Completed"
+        },
+        {
+            "entity_id": "Model_Specification",
+            "attribute": "task_details",
+            "value": "Define parsnip model specifications and expand.grid hyperparameter grids for MARS, RF, XGBoost in src/r/models/models.R, mirroring Python structure. Create separate lists for duration and occupancy targets."
+        },
+        {
+            "entity_id": "Model_Specification",
+            "attribute": "implementation_file",
+            "value": "src/r/models/models.R"
+        },
+        {
+            "entity_id": "Model_Specification",
+            "attribute": "testing_file",
+            "value": "tests/testthat/test-models.R"
+        },
+        {
+            "entity_id": "Model_Specification",
+            "attribute": "tool_used",
+            "value": "parsnip, dials"
+        },
+        {
+            "entity_id": "Model_Specification",
+            "attribute": "verification_method",
+            "value": "testthat tests passed"
+        },
+        {
+            "entity_id": "Model_Specification",
+            "attribute": "verification_timestamp",
+            "value": "2024-07-26T12:30:00Z"
+        },
+        {
+            "entity_id": "Workflow_Construction",
+            "attribute": "status",
+            "value": "Completed"
+        },
+        {
+            "entity_id": "Workflow_Construction",
+            "attribute": "task_details",
+            "value": "Create build_workflow() function in src/r/workflows/workflows.R to combine a recipe and a model specification using workflows::workflow()."
+        },
+        {
+            "entity_id": "Workflow_Construction",
+            "attribute": "implementation_file",
+            "value": "src/r/workflows/workflows.R"
+        },
+        {
+            "entity_id": "Workflow_Construction",
+            "attribute": "testing_file",
+            "value": "tests/testthat/test-workflows.R"
+        },
+        {
+            "entity_id": "Workflow_Construction",
+            "attribute": "tool_used",
+            "value": "workflows"
+        },
+        {
+            "entity_id": "Workflow_Construction",
+            "attribute": "verification_method",
+            "value": "testthat tests passed"
+        },
+        {
+            "entity_id": "Workflow_Construction",
+            "attribute": "verification_timestamp",
+            "value": "2024-07-26T12:45:00Z"
+        },
+        {
+            "entity_id": "Hyperparameter_Tuning",
+            "attribute": "status",
+            "value": "Completed"
+        },
+        {
+            "entity_id": "Hyperparameter_Tuning",
+            "attribute": "task_details",
+            "value": "Create tune_model_grid() and select_best_hyperparameters() functions in src/r/tuning/tuning.R using tune::tune_grid and tune::select_best."
+        },
+        {
+            "entity_id": "Hyperparameter_Tuning",
+            "attribute": "implementation_file",
+            "value": "src/r/tuning/tuning.R"
+        },
+        {
+            "entity_id": "Hyperparameter_Tuning",
+            "attribute": "testing_file",
+            "value": "tests/testthat/test-tuning.R"
+        },
+        {
+            "entity_id": "Hyperparameter_Tuning",
+            "attribute": "tool_used",
+            "value": "tune, rsample, yardstick"
+        },
+        {
+            "entity_id": "Hyperparameter_Tuning",
+            "attribute": "verification_method",
+            "value": "testthat tests passed (required increasing sample data size in test to avoid NaN metrics)"
+        },
+        {
+            "entity_id": "Hyperparameter_Tuning",
+            "attribute": "verification_timestamp",
+            "value": "2024-07-26T13:15:00Z"
+        },
+        {
+            "entity_id": "Model_Training",
+            "attribute": "status",
+            "value": "Completed"
+        },
+        {
+            "entity_id": "Model_Training",
+            "attribute": "task_details",
+            "value": "Create train_final_model() function in src/r/training/training.R using tune::finalize_workflow() and parsnip::fit()."
+        },
+        {
+            "entity_id": "Model_Training",
+            "attribute": "implementation_file",
+            "value": "src/r/training/training.R"
+        },
+        {
+            "entity_id": "Model_Training",
+            "attribute": "testing_file",
+            "value": "tests/testthat/test-training.R"
+        },
+        {
+            "entity_id": "Model_Training",
+            "attribute": "tool_used",
+            "value": "tune, parsnip, workflows"
+        },
+        {
+            "entity_id": "Model_Training",
+            "attribute": "verification_method",
+            "value": "testthat tests passed (simplified checks for fitted object status and trained recipe extraction)"
+        },
+        {
+            "entity_id": "Model_Training",
+            "attribute": "verification_timestamp",
+            "value": "2024-07-26T13:40:00Z"
+        },
+        {
+            "entity_id": "Evaluation",
+            "attribute": "status",
+            "value": "Completed"
+        },
+        {
+            "entity_id": "Evaluation",
+            "attribute": "task_details",
+            "value": "Create make_predictions() and evaluate_model() functions in src/r/evaluation/evaluation.R using predict() and yardstick."
+        },
+        {
+            "entity_id": "Evaluation",
+            "attribute": "implementation_file",
+            "value": "src/r/evaluation/evaluation.R"
+        },
+        {
+            "entity_id": "Evaluation",
+            "attribute": "testing_file",
+            "value": "tests/testthat/test-evaluation.R"
+        },
+        {
+            "entity_id": "Evaluation",
+            "attribute": "tool_used",
+            "value": "workflows, parsnip, yardstick"
+        },
+        {
+            "entity_id": "Evaluation",
+            "attribute": "verification_method",
+            "value": "testthat tests passed (corrected check for metric_set results)"
+        },
+        {
+            "entity_id": "Evaluation",
+            "attribute": "verification_timestamp",
+            "value": "2024-07-26T14:20:00Z"
+        },
+        {
+            "entity_id": "Pipeline_Orchestration",
+            "attribute": "status",
+            "value": "Completed"
+        },
+        {
+            "entity_id": "Pipeline_Orchestration",
+            "attribute": "task_details",
+            "value": "Create orchestration script scripts/run_pipeline.R to load data and call functions for recipe, CV setup, workflow building, tuning, training, prediction, and evaluation for a single model."
+        },
+        {
+            "entity_id": "Pipeline_Orchestration",
+            "attribute": "implementation_file",
+            "value": "scripts/run_pipeline.R"
+        },
+        {
+            "entity_id": "Pipeline_Orchestration",
+            "attribute": "tool_used",
+            "value": "here, glue, dplyr, sourced functions"
+        },
+        {
+            "entity_id": "Pipeline_Orchestration",
+            "attribute": "verification_method",
+            "value": "Manual execution (no dedicated unit tests for orchestrator)"
+        },
+        {
+            "entity_id": "Pipeline_Orchestration",
+            "attribute": "verification_timestamp",
+            "value": "2024-07-26T14:30:00Z"
+        },
+        {
+            "entity_id": "Refinement_Standards",
+            "attribute": "status",
+            "value": "Pending"
+        }
+    ]
+}

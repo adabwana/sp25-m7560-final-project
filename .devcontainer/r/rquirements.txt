@@ -1,25 +1,36 @@
-# Data manipulation and tidyverse ecosystem
+# data manipulation
 # tidyverse
 # tidyr
 lubridate
 dplyr
-readr
 
-# Weather and moon
+# external data
 lunar
 openmeteo
 
-# Data exploration and visualization
+# plotting
 ggplot2
-DataExplorer
-skimr
-fitdistrplus
-GGally
+# DataExplorer
+# imr
+# fitdistrplus
+# GGally
 
-# Statistics and modeling
-broom
+# machine learning
 caret
+tidymodels
+broom
+dials
+parsnip
+vip
 
-# Data import/export
+# engines
+earth
+randomForest
+ranger
+xgboost
+
+# utils
 here
+readr
 jsonlite
+doParallel

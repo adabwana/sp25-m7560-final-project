@@ -12,7 +12,7 @@ from sklearn.linear_model import Ridge
 from sklearn.model_selection import KFold, TimeSeriesSplit
 
 # Add project root to path
-project_root = '/workspace'
+project_root = '/workspaces/sp25-m7560-final-project'
 sys.path.append(project_root)
 
 from src.python.utils.preprocess import prepare_data, features_to_drop, target, target_2
