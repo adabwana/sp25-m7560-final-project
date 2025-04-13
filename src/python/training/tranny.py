@@ -137,46 +137,8 @@ def objective(trial: optuna.trial.Trial,
     # --- 5. Return Final Metric --- 
     return val_loss
 
-# --- Final Training Function --- 
-# (Identical to the one added in gruey.py)
-def train_final_model(model: torch.nn.Module,
-                      train_val_loader: DataLoader,
-                      loss_fn: torch.nn.modules.loss._Loss, 
-                      optimizer: torch.optim.Optimizer,
-                      final_epochs: int,
-                      device: torch.device):
-    """Trains a model on the combined train+val data for final evaluation."""
-    print(f"  Retraining final model for {final_epochs} epochs...")
-    model.train()
-    for epoch in range(final_epochs):
-        epoch_loss = 0.0
-        for features, targets in train_val_loader:
-            loss = train_step(model, features, targets, loss_fn, optimizer, device)
-            epoch_loss += loss
-        # Optional: print progress
-    print("  Retraining complete.")
-    return model
-
-# --- Evaluate on Test Set Function --- 
-# (Identical to the one added in gruey.py)
-def evaluate_on_test(model: torch.nn.Module, 
-                     test_loader: DataLoader, 
-                     y_test: pd.Series,
-                     device: torch.device) -> Dict[str, float]:
-    """Evaluates a trained model on the held-out test set."""
-    print("  Evaluating on test set...")
-    model.eval()
-    y_pred_np = predict_on_loader(model, test_loader, device)
-    y_true_np = y_test.values
-    if y_true_np.shape[0] != y_pred_np.shape[0]:
-         raise ValueError(f"Mismatch samples: y_true {y_true_np.shape[0]} vs y_pred {y_pred_np.shape[0]}")
-    if y_true_np.ndim > 1 and y_pred_np.ndim == 1:
-        y_true_np = y_true_np.squeeze()
-    metrics = calculate_regression_metrics(y_true_np, y_pred_np)
-    return metrics
-
 def main():
-    """Main function changed to orchestrate Optuna tuning AND final evaluation for Transformer."""
+    """Main function changed to orchestrate Optuna hyperparameter tuning for Transformer."""
     
     # --- Configuration (Fixed parts and defaults) ---
     TARGET_VARIABLE = "Duration_In_Min"
@@ -191,8 +153,6 @@ def main():
     TEST_SET_RATIO = 0.2 
     VALIDATION_SET_RATIO = 0.2 
     N_TRIALS = 30 # Number of Optuna trials
-    FINAL_TRAINING_EPOCHS = 20 # Epochs to train final models
-    N_TOP_TRIALS_TO_EVAL = 4 # Evaluate top N trials
     
     # --- Device Configuration ---
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -203,48 +163,56 @@ def main():
     TRAIN_FILE = os.path.join(DATA_DIR, "train_engineered.csv")
     PARAMS_SAVE_DIR = os.path.join(project_root, "artifacts", "params", "pytorch")
     os.makedirs(PARAMS_SAVE_DIR, exist_ok=True)
-    # PARAMS_FILENAME defined later based on rank
+    PARAMS_FILENAME = f"best_transformer_params_{TARGET_VARIABLE}.json"
+    PARAMS_SAVE_PATH = os.path.join(PARAMS_SAVE_DIR, PARAMS_FILENAME)
 
     try:
-        # --- 1. Load Data & 2. Split Data (Identical to gruey.py) ---
+        # --- 1. Load Data --- 
         full_df = load_data(TRAIN_FILE)
-        train_val_df, df_test = train_test_split(full_df, test_size=TEST_SET_RATIO, random_state=3)
-        df_train, df_val = train_test_split(train_val_df, test_size=VALIDATION_SET_RATIO, random_state=3)
+        print("\nData loaded successfully.")
+        
+        # --- 2. Split into Train/Validation/Test --- 
+        train_val_df, df_test = train_test_split(full_df, test_size=TEST_SET_RATIO, random_state=42)
+        df_train, df_val = train_test_split(train_val_df, test_size=VALIDATION_SET_RATIO, random_state=42)
         print(f"Data split: Train={len(df_train)}, Validation={len(df_val)}, Test={len(df_test)}")
 
-        # --- 3. Preprocess Train & Validation (for Optuna) --- 
+        # --- 3. Preprocess Train, Validation Sets --- 
         cols_to_drop_this_run = list(set(BASE_FEATURES_TO_DROP) - {TARGET_VARIABLE})
-        print("\nPreprocessing Train data (for Optuna)...")
+        print("\nPreprocessing training data...")
         X_train, y_train = preprocess_data(df_train.copy(), TARGET_VARIABLE, cols_to_drop_this_run)
-        print("Preprocessing Validation data (for Optuna)...")
+        print("\nPreprocessing validation data...")
         X_val, y_val = preprocess_data(df_val.copy(), TARGET_VARIABLE, cols_to_drop_this_run)
-        
-        # Align Validation columns
+
+        # --- Align columns (Train -> Val) --- 
         train_cols = X_train.columns
+        print("\nAligning Validation columns...")
         val_cols = set(X_val.columns)
         if set(train_cols) != val_cols:
-            print("Aligning Validation columns...")
             missing_in_val = list(set(train_cols) - val_cols)
             for col in missing_in_val: X_val[col] = 0
             extra_in_val = list(val_cols - set(train_cols))
             if extra_in_val: X_val = X_val.drop(columns=extra_in_val)
             X_val = X_val[train_cols]
+            print("Aligned Validation columns.")
 
-        # Convert bools (Train & Val)
-        for col in X_train.columns: 
+        # --- Convert bools --- 
+        print("\nConverting boolean columns...")
+        for col in X_train.columns:
             if X_train[col].dtype == 'bool':
                 X_train[col] = X_train[col].astype(int)
                 if col in X_val.columns: X_val[col] = X_val[col].astype(int)
         
-        # --- 4. Feature Scaling (for Optuna) --- 
-        print("\nScaling features (for Optuna)...")
-        scaler_optuna = StandardScaler()
-        X_train_scaled = scaler_optuna.fit_transform(X_train)
-        X_val_scaled = scaler_optuna.transform(X_val)
+        # --- 4. Feature Scaling --- 
+        print("\nScaling features...")
+        scaler = StandardScaler()
+        X_train_scaled = scaler.fit_transform(X_train)
+        X_val_scaled = scaler.transform(X_val)
+        print("Features scaled.")
         input_dim = X_train_scaled.shape[1] 
 
-        # --- 5. Optuna Study --- 
+        # --- 5. Optuna Study Setup --- 
         study = optuna.create_study(direction="minimize", pruner=optuna.pruners.MedianPruner())
+        
         print(f"\n--- Starting Optuna Study for Transformer ({N_TRIALS} trials) ---")
         study.optimize(
             lambda trial: objective(trial, X_train_scaled, y_train, X_val_scaled, y_val, input_dim, device),
@@ -252,97 +220,54 @@ def main():
         )
         print("--- Optuna Study Finished ---")
 
-        # --- 6. Process Results & Retrain/Evaluate Top N --- 
+        # --- 6. Output and Save Results --- 
         pruned_trials = study.get_trials(deepcopy=False, states=[optuna.trial.TrialState.PRUNED])
         complete_trials = study.get_trials(deepcopy=False, states=[optuna.trial.TrialState.COMPLETE])
 
         print("\n--- Tuning Summary ---")
-        print(f"Number of finished trials: {len(study.trials)}")
-        print(f"Number of pruned trials: {len(pruned_trials)}")
-        print(f"Number of complete trials: {len(complete_trials)}")
+        print(f"Study statistics: ")
+        print(f"  Number of finished trials: {len(study.trials)}")
+        print(f"  Number of pruned trials: {len(pruned_trials)}")
+        print(f"  Number of complete trials: {len(complete_trials)}")
 
-        if complete_trials: 
+        if complete_trials: # Check if any trials completed successfully
+            print("\nBest trial found:")
+            best_trial = study.best_trial
+            print(f"  Value (Min Validation Loss): {best_trial.value:.4f}")
+            print("  Best Parameters: ")
+            best_params = best_trial.params
+            for key, value in best_params.items():
+                print(f"    {key}: {value}")
+
+            # --- Sort trials by validation loss (best first) ---
             complete_trials.sort(key=lambda t: t.value)
-            num_trials_to_eval = min(len(complete_trials), N_TOP_TRIALS_TO_EVAL)
-            print(f"\n--- Retraining and Evaluating Top {num_trials_to_eval} Transformer Trials on Test Set ---")
 
-            # --- Preprocess Combined Train+Val Data and Test Data (for final eval) ---
-            # (Identical logic to gruey.py)
-            print("\nPreprocessing combined Train+Val data...")
-            X_train_val, y_train_val = preprocess_data(train_val_df.copy(), TARGET_VARIABLE, cols_to_drop_this_run)
-            print("Preprocessing Test data...")
-            X_test, y_test = preprocess_data(df_test.copy(), TARGET_VARIABLE, cols_to_drop_this_run)
-            train_val_cols = X_train_val.columns
-            test_cols = set(X_test.columns)
-            if set(train_val_cols) != test_cols:
-                print("Aligning Test columns...")
-                missing_in_test = list(set(train_val_cols) - test_cols)
-                for col in missing_in_test: X_test[col] = 0
-                extra_in_test = list(test_cols - set(train_val_cols))
-                if extra_in_test: X_test = X_test.drop(columns=extra_in_test)
-                X_test = X_test[train_val_cols]
-            for col in X_train_val.columns: 
-                if X_train_val[col].dtype == 'bool':
-                    X_train_val[col] = X_train_val[col].astype(int)
-                    if col in X_test.columns: X_test[col] = X_test[col].astype(int)
-            print("Scaling features for final training/evaluation...")
-            scaler_final = StandardScaler()
-            X_train_val_scaled = scaler_final.fit_transform(X_train_val)
-            X_test_scaled = scaler_final.transform(X_test)
-            final_input_dim = X_train_val_scaled.shape[1]
-            train_val_dataset = TabularDataset(X_train_val_scaled, y_train_val)
-            test_dataset = TabularDataset(X_test_scaled, y_test)
-            final_batch_size = 64 # Example fixed size
-            train_val_loader = DataLoader(train_val_dataset, batch_size=final_batch_size, shuffle=True)
-            test_loader = DataLoader(test_dataset, batch_size=final_batch_size, shuffle=False)
-            # --- End Data Prep for Final Eval ---
-
-            for i in range(num_trials_to_eval):
+            print("\nTop 4 Trials:")
+            num_trials_to_save = min(len(complete_trials), 4)
+            for i in range(num_trials_to_save):
                 trial = complete_trials[i]
-                best_params = trial.params
-                print(f"\nRank {i+1}: Value (Val Loss): {trial.value:.4f}, Params: {best_params}")
+                print(f"  Rank {i+1}: Value (Loss): {trial.value:.4f}, Params: {trial.params}")
                 
-                # --- Instantiate Model with Best Params ---
-                # Ensure d_model % nhead == 0 (should be guaranteed if trial completed)
-                d_model = best_params['d_model']
-                nhead = best_params['nhead']
-                if d_model % nhead != 0:
-                    print(f"    Warning: Inconsistent state - d_model {d_model} not divisible by nhead {nhead}. Skipping retraining.")
-                    continue
-                
-                model = TabularTransformerModel(
-                    input_dim=final_input_dim, 
-                    d_model=d_model,
-                    nhead=nhead,
-                    d_hid=best_params['d_hid'],
-                    nlayers=best_params['nlayers'],
-                    output_dim=1,
-                    dropout=best_params['dropout']
-                ).to(device)
-                optimizer = torch.optim.Adam(model.parameters(), lr=best_params['lr'])
-                loss_fn = nn.MSELoss()
-                
-                # --- Retrain on Combined Data --- 
-                retrained_model = train_final_model(model, train_val_loader, loss_fn, optimizer, FINAL_TRAINING_EPOCHS, device)
-
-                # --- Evaluate on Test Set --- 
-                test_metrics = evaluate_on_test(retrained_model, test_loader, y_test, device)
-                # metrics printed within evaluate_on_test
-                
-                # --- Save Parameters --- 
-                params_filename = f"transformer_{str(i+1).zfill(2)}_params_{TARGET_VARIABLE}.json"
-                params_save_path = os.path.join(PARAMS_SAVE_DIR, params_filename)
+                # --- Save Top N Parameters --- 
+                # PARAMS_SAVE_PATH is defined earlier
+                # Format rank with zero padding
+                rank_str = str(i + 1).zfill(2)
+                # Construct filename using PARAMS_SAVE_DIR and a new format
+                params_filename = f"transformer_{rank_str}_params_{TARGET_VARIABLE}.json"
+                params_save_path_ranked = os.path.join(PARAMS_SAVE_DIR, params_filename)
                 try:
-                    with open(params_save_path, 'w') as f:
-                        json.dump(best_params, f, indent=4)
-                    print(f"  Parameters saved to: {params_save_path}")
+                    import json 
+                    with open(params_save_path_ranked, 'w') as f:
+                        json.dump(trial.params, f, indent=4)
+                    print(f"    Parameters saved to: {params_save_path_ranked}")
                 except Exception as e:
-                    print(f"  Error saving parameters for rank {i+1} to {params_save_path}: {e}")
+                    print(f"    Error saving parameters for rank {i+1} to {params_save_path_ranked}: {e}")
+            # --- End Save --- 
         else:
-            print("\nNo trials completed successfully. Cannot evaluate.")
-        
-        # Remove note about manual update
-        # print("\nNOTE: To run final training ...")
+            print("\nNo trials completed successfully. Unable to determine or save best parameters.")
+            
+        print("\nNOTE: To run final training, manually update constants or create a script ")
+        print("that loads these parameters and trains on the full train+validation set.")
 
     except FileNotFoundError as e:
         print(f"\nError: Data file not found - {e}")
