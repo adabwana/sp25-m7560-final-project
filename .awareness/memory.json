@@ -64,6 +64,61 @@
             "id": "Refinement_Standards",
             "type": "Task",
             "name": "Refinement and Standards"
+        },
+        {
+            "id": "Data_Preparation",
+            "type": "Task",
+            "name": "Data Preparation for Model Feeding"
+        },
+        {
+            "id": "Python_PyTorch_Models",
+            "type": "Task",
+            "name": "Building Python PyTorch Models"
+        },
+        {
+            "id": "minGRU_Model",
+            "type": "Component",
+            "name": "minGRU PyTorch Model"
+        },
+        {
+            "id": "minLSTM_Model",
+            "type": "Component",
+            "name": "minLSTM PyTorch Model"
+        },
+        {
+            "id": "Pytest_Testing",
+            "type": "Task",
+            "name": "Pytest Unit Testing for PyTorch Models"
+        },
+        {
+            "id": "Python_Preprocessing",
+            "type": "Task",
+            "name": "Python Data Preprocessing Function"
+        },
+        {
+            "id": "PyTorch_DatasetLoader",
+            "type": "Task",
+            "name": "PyTorch Dataset and DataLoader Implementation"
+        },
+        {
+            "id": "GrueyModel_Architecture",
+            "type": "Task",
+            "name": "GrueyModel PyTorch Architecture Definition"
+        },
+        {
+            "id": "PyTorch_Train_Step",
+            "type": "Task",
+            "name": "PyTorch Single Training Step Function"
+        },
+        {
+            "id": "Refactoring_Python_Code",
+            "type": "Task",
+            "name": "Refactoring Python Training Code into Modules"
+        },
+        {
+            "id": "PyTorch_Training_Loop",
+            "type": "Task",
+            "name": "PyTorch Basic Training Loop Execution"
         }
     ],
     "relations": [
@@ -201,6 +256,126 @@
             "source": "Refinement_Standards",
             "target": "R_MLOps_Project",
             "type": "part_of_phase_4_for"
+        },
+        {
+            "source": "Data_Preparation",
+            "target": "R_MLOps_Project",
+            "type": "part_of"
+        },
+        {
+            "source": "Data_Preparation",
+            "target": "Python_PyTorch_Models",
+            "type": "informs"
+        },
+        {
+            "source": "Python_PyTorch_Models",
+            "target": "R_MLOps_Project",
+            "type": "follows"
+        },
+        {
+            "source": "minGRU_Model",
+            "target": "Python_PyTorch_Models",
+            "type": "part_of"
+        },
+        {
+            "source": "minLSTM_Model",
+            "target": "Python_PyTorch_Models",
+            "type": "part_of"
+        },
+        {
+            "source": "Pytest_Testing",
+            "target": "Python_PyTorch_Models",
+            "type": "part_of"
+        },
+        {
+            "source": "Pytest_Testing",
+            "target": "minGRU_Model",
+            "type": "tests"
+        },
+        {
+            "source": "Pytest_Testing",
+            "target": "minLSTM_Model",
+            "type": "tests"
+        },
+        {
+            "source": "TDD_Approach",
+            "target": "Pytest_Testing",
+            "type": "implemented_with"
+        },
+        {
+            "source": "Python_Preprocessing",
+            "target": "Python_PyTorch_Models",
+            "type": "part_of"
+        },
+        {
+            "source": "Python_Preprocessing",
+            "target": "Data_Preparation",
+            "type": "implements"
+        },
+        {
+            "source": "TDD_Approach",
+            "target": "Python_Preprocessing",
+            "type": "developed_using"
+        },
+        {
+            "source": "PyTorch_DatasetLoader",
+            "target": "Python_Preprocessing",
+            "type": "follows"
+        },
+        {
+            "source": "PyTorch_DatasetLoader",
+            "target": "Python_PyTorch_Models",
+            "type": "part_of"
+        },
+        {
+            "source": "TDD_Approach",
+            "target": "PyTorch_DatasetLoader",
+            "type": "developed_using"
+        },
+        {
+            "source": "GrueyModel_Architecture",
+            "target": "PyTorch_DatasetLoader",
+            "type": "follows"
+        },
+        {
+            "source": "GrueyModel_Architecture",
+            "target": "Python_PyTorch_Models",
+            "type": "part_of"
+        },
+        {
+            "source": "TDD_Approach",
+            "target": "GrueyModel_Architecture",
+            "type": "developed_using"
+        },
+        {
+            "source": "PyTorch_Train_Step",
+            "target": "GrueyModel_Architecture",
+            "type": "follows"
+        },
+        {
+            "source": "PyTorch_Train_Step",
+            "target": "Python_PyTorch_Models",
+            "type": "part_of"
+        },
+        {
+            "source": "TDD_Approach",
+            "target": "PyTorch_Train_Step",
+            "type": "developed_using"
+        },
+        {
+            "source": "Refactoring_Python_Code",
+            "target": "Python_PyTorch_Models",
+            "type": "part_of"
+        },
+        {
+            "source": "PyTorch_Training_Loop",
+            "target": "PyTorch_Train_Step",
+            "type": "uses"
+        },
+        {
+            "source": "PyTorch_Training_Loop",
+            "target": "Python_PyTorch_Models",
+            "type": "part_of"
         }
     ],
     "observations": [
@@ -498,6 +673,251 @@
             "entity_id": "Refinement_Standards",
             "attribute": "status",
             "value": "Pending"
+        },
+        {
+            "entity_id": "Data_Preparation",
+            "attribute": "status",
+            "value": "Completed"
+        },
+        {
+            "entity_id": "Data_Preparation",
+            "attribute": "task_details",
+            "value": "Data preparation involves loading data from 'data/processed/train_engineered.csv', performing an 80/20 train-test split without shuffling to maintain temporal order (if applicable), and preprocessing using a `tidymodels` recipe. The recipe includes steps like dropping irrelevant columns, converting time features to minutes, creating dummy variables for categorical features, removing zero-variance predictors, and normalizing numeric predictors. A tunable feature selection step using `step_select_vip` is also included to select the top k features based on variable importance."
+        },
+        {
+            "entity_id": "Data_Preparation",
+            "attribute": "implementation_file",
+            "value": "src/r/recipes.R and src/r/train_tune.R"
+        },
+        {
+            "entity_id": "Data_Preparation",
+            "attribute": "purpose_for_models",
+            "value": "The prepared data is structured to be fed into machine learning models, ensuring that features are appropriately transformed and selected to maximize model performance. For R models, data is passed through a `tidymodels` workflow combining recipe and model specification. For transitioning to Python PyTorch models, the same processed data (post-recipe) or raw data can be used, with necessary adaptations for PyTorch's data loading mechanisms like `torch.utils.data.DataLoader` to handle tensor conversion and batching."
+        },
+        {
+            "entity_id": "Data_Preparation",
+            "attribute": "data_feeding_strategy",
+            "value": "In R, data is fed as tibbles/data.frames directly into workflows for tuning and training. For PyTorch, data should be converted to numpy arrays and then to tensors, batched using DataLoader for efficient gradient computation during training neural networks."
+        },
+        {
+            "entity_id": "Data_Preparation",
+            "attribute": "verification_timestamp",
+            "value": "2024-07-26T15:00:00Z"
+        },
+        {
+            "entity_id": "minGRU_Model",
+            "attribute": "source_file",
+            "value": "src/python/models/mingru.py"
+        },
+        {
+            "entity_id": "minLSTM_Model",
+            "attribute": "source_file",
+            "value": "src/python/models/minlstm.py"
+        },
+        {
+            "entity_id": "Pytest_Testing",
+            "attribute": "status",
+            "value": "In Progress"
+        },
+        {
+            "entity_id": "Pytest_Testing",
+            "attribute": "implementation_file",
+            "value": "tests/python/test_min_rnn.py"
+        },
+        {
+            "entity_id": "Pytest_Testing",
+            "attribute": "details",
+            "value": "Initial tests created for minGRU and minLSTM covering initialization, forward pass shapes (parallel/sequential), and hidden state return. Resolved ModuleNotFoundError during test collection."
+        },
+        {
+            "entity_id": "Python_PyTorch_Models",
+            "attribute": "import_resolution_issue",
+            "value": "Encountered ModuleNotFoundError when importing minGRU/minLSTM from test script despite adding relevant directories to sys.path. Issue traced to internal import within minlstm.py (relative import from .mingru failed). Resolved by changing internal import to absolute (from mingru) relying on src/python/models being in sys.path."
+        },
+        {
+            "entity_id": "Pytest_Testing",
+            "attribute": "verification_timestamp",
+            "value": "2024-07-26T16:00:00Z"
+        },
+        {
+            "entity_id": "Python_Preprocessing",
+            "attribute": "status",
+            "value": "Completed"
+        },
+        {
+            "entity_id": "Python_Preprocessing",
+            "attribute": "implementation_file",
+            "value": "src/python/utils/preprocessing.py"
+        },
+        {
+            "entity_id": "Python_Preprocessing",
+            "attribute": "testing_file",
+            "value": "tests/python/test_gruey.py"
+        },
+        {
+            "entity_id": "Python_Preprocessing",
+            "attribute": "task_details",
+            "value": "Implemented preprocess_data function mimicking R recipe logic: separate target, drop specified columns, convert Check_In_Time to minutes, create dummy variables for remaining categoricals. Placeholders for scaling and feature selection included."
+        },
+        {
+            "entity_id": "Pytest_Testing",
+            "attribute": "details",
+            "value": "Initial tests created for minGRU/minLSTM... Resolved ModuleNotFoundError... Added tests for preprocess_data function, including debugging test assertions related to columns dropped during preprocessing."
+        },
+        {
+            "entity_id": "Python_Preprocessing",
+            "attribute": "verification_method",
+            "value": "pytest tests passed"
+        },
+        {
+            "entity_id": "Python_Preprocessing",
+            "attribute": "verification_timestamp",
+            "value": "2024-07-26T16:30:00Z"
+        },
+        {
+            "entity_id": "PyTorch_DatasetLoader",
+            "attribute": "status",
+            "value": "Completed"
+        },
+        {
+            "entity_id": "PyTorch_DatasetLoader",
+            "attribute": "implementation_file",
+            "value": "src/python/datasets.py"
+        },
+        {
+            "entity_id": "PyTorch_DatasetLoader",
+            "attribute": "testing_file",
+            "value": "tests/python/test_gruey.py"
+        },
+        {
+            "entity_id": "PyTorch_DatasetLoader",
+            "attribute": "task_details",
+            "value": "Implemented TabularDataset class inheriting from torch.utils.data.Dataset to convert preprocessed pandas DataFrames/Series into float32 tensors. Tested initialization, __len__, __getitem__, and integration with DataLoader."
+        },
+        {
+            "entity_id": "PyTorch_DatasetLoader",
+            "attribute": "verification_method",
+            "value": "pytest tests passed"
+        },
+        {
+            "entity_id": "PyTorch_DatasetLoader",
+            "attribute": "verification_timestamp",
+            "value": "2024-07-26T17:00:00Z"
+        },
+        {
+            "entity_id": "Pytest_Testing",
+            "attribute": "issue_resolution",
+            "value": "Resolved 'pytest: command not found' by using 'python -m pytest' instead, as the executable directory (~/.local/bin) was not in PATH."
+        },
+        {
+            "entity_id": "GrueyModel_Architecture",
+            "attribute": "status",
+            "value": "Completed"
+        },
+        {
+            "entity_id": "GrueyModel_Architecture",
+            "attribute": "implementation_file",
+            "value": "src/python/models/gruey_architecture.py"
+        },
+        {
+            "entity_id": "GrueyModel_Architecture",
+            "attribute": "testing_file",
+            "value": "tests/python/test_gruey.py"
+        },
+        {
+            "entity_id": "GrueyModel_Architecture",
+            "attribute": "task_details",
+            "value": "Implemented GrueyModel class (nn.Module) using an input Linear layer, the minGRU layer (imported from python.models.mingru), and an output Linear layer. Assumes tabular input is treated as sequence length 1. Tested initialization and forward pass shape/type."
+        },
+        {
+            "entity_id": "Pytest_Testing",
+            "attribute": "details",
+            "value": "Initial tests for minGRU/minLSTM... Resolved ModuleNotFoundError... Added tests for preprocess_data... Added tests for TabularDataset/DataLoader... Added tests for GrueyModel architecture (init, forward pass). Corrected assertion logic in model forward pass test."
+        },
+        {
+            "entity_id": "GrueyModel_Architecture",
+            "attribute": "verification_method",
+            "value": "pytest tests passed"
+        },
+        {
+            "entity_id": "GrueyModel_Architecture",
+            "attribute": "verification_timestamp",
+            "value": "2024-07-26T17:30:00Z"
+        },
+        {
+            "entity_id": "PyTorch_Train_Step",
+            "attribute": "status",
+            "value": "Completed"
+        },
+        {
+            "entity_id": "PyTorch_Train_Step",
+            "attribute": "implementation_file",
+            "value": "src/python/training/gruey.py"
+        },
+        {
+            "entity_id": "PyTorch_Train_Step",
+            "attribute": "testing_file",
+            "value": "tests/python/test_gruey.py"
+        },
+        {
+            "entity_id": "PyTorch_Train_Step",
+            "attribute": "task_details",
+            "value": "Implemented train_step function performing one forward pass, loss calculation (MSE), backward pass, and optimizer step (Adam). Tested successful execution, gradient creation, and parameter updates."
+        },
+        {
+            "entity_id": "PyTorch_Train_Step",
+            "attribute": "verification_method",
+            "value": "pytest tests passed"
+        },
+        {
+            "entity_id": "PyTorch_Train_Step",
+            "attribute": "verification_timestamp",
+            "value": "2024-07-26T17:45:00Z"
+        },
+        {
+            "entity_id": "Refactoring_Python_Code",
+            "attribute": "status",
+            "value": "Completed"
+        },
+        {
+            "entity_id": "Refactoring_Python_Code",
+            "attribute": "task_details",
+            "value": "Refactored gruey.py: moved load_data to utils/data_utils.py, preprocess_data to utils/preprocessing.py, TabularDataset to datasets.py, and GrueyModel to models/gruey_architecture.py. Updated imports and ensured tests passed after each step."
+        },
+        {
+            "entity_id": "Refactoring_Python_Code",
+            "attribute": "verification_method",
+            "value": "pytest tests passed"
+        },
+        {
+            "entity_id": "Refactoring_Python_Code",
+            "attribute": "verification_timestamp",
+            "value": "2024-07-26T18:00:00Z"
+        },
+        {
+            "entity_id": "PyTorch_Training_Loop",
+            "attribute": "status",
+            "value": "Completed (Basic Loop)"
+        },
+        {
+            "entity_id": "PyTorch_Training_Loop",
+            "attribute": "implementation_file",
+            "value": "src/python/training/gruey.py"
+        },
+        {
+            "entity_id": "PyTorch_Training_Loop",
+            "attribute": "task_details",
+            "value": "Implemented main training loop in gruey.py: loads data, splits, preprocesses (incl. bool->int conversion), creates Dataset/DataLoader, initializes GrueyModel/MSELoss/Adam, runs for 10 epochs calling train_step. Resolved TypeError (numpy.object_ -> Tensor) by explicitly converting boolean columns to int after preprocessing."
+        },
+        {
+            "entity_id": "PyTorch_Training_Loop",
+            "attribute": "verification_method",
+            "value": "Successful script execution with decreasing training loss."
+        },
+        {
+            "entity_id": "PyTorch_Training_Loop",
+            "attribute": "verification_timestamp",
+            "value": "2024-07-26T18:15:00Z"
         }
     ]
 }

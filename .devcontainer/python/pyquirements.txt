@@ -10,10 +10,16 @@ scipy
 
 # machine learning
 scikit-learn
-xgboost
-pyearth
-statsmodels
+
+# deep learning
+torch
+torchvision
+# torchaudio
+
+# additional libraries for model architectures (MinGRU, MinLSTM, Mamba)
+transformers
 
 # utils
 mlflow
+pytest
 ipykernel

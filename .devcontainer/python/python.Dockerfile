@@ -6,11 +6,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     ca-certificates \
     curl \
-    libgdal-dev \
-    gdal-bin \
-    build-essential \
-    gcc \
-    g++ \
     && rm -rf /var/lib/apt/lists/*
 
 # Install a specific version of GDAL Python bindings compatible with system libgdal 3.6.2

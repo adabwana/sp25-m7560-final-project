@@ -23,6 +23,13 @@
             }
         }
     },
+    // "features": {
+    //     "ghcr.io/devcontainers/features/nvidia-cuda:1": {
+    //         "installToolkit": false,
+    //         "cudaVersion": "12.4",
+    //         "installCudnn": false
+    //     }
+    // },
     // User configuration
     "remoteUser": "vscode",
     "updateRemoteUserUID": true,

@@ -91,5 +91,139 @@
                 "hyperparameters"
             ]
         }
+    },
+    {
+        "id": "LESSON_PYTEST_IMPORT_RESOLUTION_001",
+        "type": "Lesson",
+        "name": "Resolving Internal Imports within Modules Under Test in Pytest",
+        "problem_pattern": {
+            "description": "Pytest fails to collect tests due to ModuleNotFoundError/ImportError when the test script imports a module (e.g., module A) which itself imports another local module (e.g., module B using 'from .B import ...' or 'from B import ...'). This occurs even if the directory containing both modules A and B is added to sys.path in the test script.",
+            "error_messages": [
+                "ModuleNotFoundError: No module named 'B'",
+                "ImportError: attempted relative import with no known parent package",
+                "ERROR collecting tests/python/test_module_a.py",
+                "Interrupted: 1 error during collection"
+            ],
+            "context": "Running pytest from the project root. Test script in tests/ modifies sys.path to include src/python/models. Test script imports module src/python/models/module_a.py. Module A tries to import src/python/models/module_b.py."
+        },
+        "solution": {
+            "steps": [
+                "Ensure necessary __init__.py files exist in the directories to make them packages (e.g., src/python/ and src/python/models/).",
+                "In the test script (e.g., tests/python/test_module_a.py), modify sys.path to include the *parent directory* containing the modules (e.g., add src/python/models to sys.path).",
+                "Within the module being imported by the first module (e.g., in module_a.py), change the internal import from relative (from .module_b import ...) to absolute (from module_b import ...). This relies on the parent directory (src/python/models) being present in sys.path when the test runs.",
+                "Verify the fix by running pytest again; tests should now be collected and executed."
+            ],
+            "verification": "Pytest successfully collects and runs tests without ModuleNotFoundError related to the internal import."
+        },
+        "environment": {
+            "packages": [
+                "pytest",
+                "torch"
+            ],
+            "python_version": "3.11",
+            "os": "linux"
+        },
+        "metadata": {
+            "creation_date": "2024-07-26T16:05:00Z",
+            "last_updated_date": "2024-07-26T16:05:00Z",
+            "tags": [
+                "pytest",
+                "import",
+                "ModuleNotFoundError",
+                "ImportError",
+                "relative import",
+                "absolute import",
+                "sys.path",
+                "test collection"
+            ]
+        }
+    },
+    {
+        "id": "LESSON_PYTEST_COMMAND_NOT_FOUND_001",
+        "type": "Lesson",
+        "name": "Resolving 'pytest: command not found' in User Site-Packages Installations",
+        "problem_pattern": {
+            "description": "Running the `pytest` command directly in the shell results in 'bash: pytest: command not found', even though `pip show pytest` or `pip install pytest` confirms it is installed.",
+            "error_messages": [
+                "bash: pytest: command not found"
+            ],
+            "context": "Working within a Python environment (e.g., virtual environment, dev container) where packages are installed into the user's local site-packages directory (e.g., ~/.local/lib/pythonX.Y/site-packages). The corresponding script directory (e.g., ~/.local/bin) is not included in the shell's PATH environment variable."
+        },
+        "solution": {
+            "steps": [
+                "Verify pytest installation location using `pip show pytest`.",
+                "Confirm that the user's local bin directory (e.g., `~/.local/bin`) is not in the output of `echo $PATH`.",
+                "**Workaround:** Execute pytest as a Python module using `python -m pytest [arguments]`. This bypasses the need for the executable to be in the PATH.",
+                "**Alternative (Permanent Fix):** Add the user's local bin directory to the PATH. Add `export PATH=\"$PATH:$HOME/.local/bin\"` to the shell configuration file (e.g., `~/.bashrc`, `~/.zshrc`) and reload the shell or open a new terminal."
+            ],
+            "verification": "Running `python -m pytest [arguments]` successfully executes the tests. Alternatively, after modifying PATH, running `pytest [arguments]` directly works."
+        },
+        "environment": {
+            "packages": [
+                "pytest",
+                "pip"
+            ],
+            "python_version": "Any",
+            "os": "linux/unix-like"
+        },
+        "metadata": {
+            "creation_date": "2024-07-26T17:15:00Z",
+            "last_updated_date": "2024-07-26T17:15:00Z",
+            "tags": [
+                "pytest",
+                "command not found",
+                "PATH",
+                "python -m",
+                "pip",
+                "user site-packages",
+                "environment setup"
+            ]
+        }
+    },
+    {
+        "id": "LESSON_PYTORCH_TENSOR_TYPEERROR_BOOL_OBJECT_001",
+        "type": "Lesson",
+        "name": "Resolving PyTorch TypeError for DataFrame with Boolean Columns",
+        "problem_pattern": {
+            "description": "Calling `torch.tensor(dataframe.values)` fails with `TypeError: can't convert np.ndarray of type numpy.object_.` even if the DataFrame appears numeric, often because it contains boolean columns.",
+            "error_messages": [
+                "TypeError: can't convert np.ndarray of type numpy.object_. The only supported types are: float64, float32, float16, complex64, complex128, int64, int32, int16, int8, uint64, uint32, uint16, uint8, and bool."
+            ],
+            "context": "Converting a pandas DataFrame (potentially resulting from preprocessing steps like pd.get_dummies) to a PyTorch tensor for use in a Dataset or model. The DataFrame contains columns with dtype 'bool' alongside other numeric types (int, float)."
+        },
+        "solution": {
+            "steps": [
+                "Before converting the DataFrame to a tensor, explicitly convert all boolean columns to a numeric type that PyTorch supports (e.g., int or float).",
+                "Example:",
+                "  `for col in df.columns:`",
+                "  `    if df[col].dtype == 'bool':`",
+                "  `        df[col] = df[col].astype(int)`",
+                "Then proceed with `torch.tensor(df.values)`."
+            ],
+            "verification": "The `torch.tensor()` conversion succeeds without raising a TypeError."
+        },
+        "environment": {
+            "packages": [
+                "torch",
+                "pandas",
+                "numpy"
+            ],
+            "python_version": "Any",
+            "os": "Any"
+        },
+        "metadata": {
+            "creation_date": "2024-07-26T18:20:00Z",
+            "last_updated_date": "2024-07-26T18:20:00Z",
+            "tags": [
+                "pytorch",
+                "pandas",
+                "tensor",
+                "TypeError",
+                "boolean",
+                "dtype",
+                "object",
+                "conversion"
+            ]
+        }
     }
 ]
