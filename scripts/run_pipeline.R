@@ -37,7 +37,7 @@ source(here::here("src/r/evaluation/evaluation.R"))
 # TODO: Move these to a config file/package (e.g., config::get())
 DATA_FILENAME <- "train_engineered.csv" # Use only the training data
 TEST_SPLIT_PROP <- 0.8 # Proportion of data for training set
-TARGET_VARIABLE <- "Duration_In_Min" # Or "Occupancy"
+TARGET_VARIABLE <- "Occupancy" # "Duration_In_Min" Or "Occupancy"
 CV_FOLDS <- 5 # Number of cross-validation folds
 SEED <- 3 # For reproducibility
 TUNING_METRIC <- "rmse" # Metric to select best hyperparameters (use "accuracy" or "roc_auc" for classification)
@@ -47,6 +47,15 @@ FEATURES_TO_DROP <- c(
     "Course_Name", "Course_Number", "Course_Type", "Course_Code_by_Thousands",
     "Check_Out_Time", "Session_Length_Category"
 ) # Add others as needed
+
+# Add the *other* target variable to the drop list
+if (TARGET_VARIABLE == "Duration_In_Min") {
+  FEATURES_TO_DROP <- c(FEATURES_TO_DROP, "Occupancy")
+} else if (TARGET_VARIABLE == "Occupancy") {
+  FEATURES_TO_DROP <- c(FEATURES_TO_DROP, "Duration_In_Min")
+} else {
+  warning(glue::glue("Unknown TARGET_VARIABLE: '{TARGET_VARIABLE}'. Not adding default other target to FEATURES_TO_DROP."))
+}
 
 # Define metric set based on task (regression in this case)
 # TODO: Handle classification metrics if TARGET_VARIABLE changes
@@ -231,7 +240,7 @@ if (length(all_test_metrics) > 0) {
         
         best_model_name <- best_model_summary %>%
             pull(model_name)
-            
+
         cat(glue::glue("\nBest model based on test set {TUNING_METRIC}: {best_model_name}\n"))
         
         # --- Save the Best Model --- 
@@ -239,9 +248,16 @@ if (length(all_test_metrics) > 0) {
             best_model_object <- all_final_models[[best_model_name]]
             
             if (!is.null(best_model_object)) {
+                # Get the best metric value for the filename
+                best_metric_value <- best_model_summary %>% pull(.data[[TUNING_METRIC]])
+                # Format the metric value for filename (e.g., round, replace '.')
+                formatted_metric_value <- format(round(best_metric_value, 3), nsmall = 3) %>% 
+                                          stringr::str_replace_all("\\.", "-") # Replace . with -
+            
                 save_dir <- here::here("artifacts", "r", "models")
                 dir.create(save_dir, recursive = TRUE, showWarnings = FALSE)
-                save_filename <- glue::glue("{TARGET_VARIABLE}_best_model_{best_model_name}.rds")
+                # Construct filename including formatted metric value
+                save_filename <- glue::glue("{TARGET_VARIABLE}_best_{TUNING_METRIC}_{formatted_metric_value}_{best_model_name}.rds")
                 save_path <- file.path(save_dir, save_filename)
                 
                 cat(glue::glue("--- Saving best model ({best_model_name}) for target '{TARGET_VARIABLE}' to {save_path} ---\n"))
