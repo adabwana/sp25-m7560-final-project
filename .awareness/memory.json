@@ -119,6 +119,16 @@
             "id": "PyTorch_Training_Loop",
             "type": "Task",
             "name": "PyTorch Basic Training Loop Execution"
+        },
+        {
+            "id": "PyTorch_Optuna_Tuning",
+            "type": "Task",
+            "name": "PyTorch Hyperparameter Tuning using Optuna"
+        },
+        {
+            "id": "Train_Val_Test_Split",
+            "type": "Methodology",
+            "name": "Train/Validation/Test Data Splitting Strategy"
         }
     ],
     "relations": [
@@ -376,6 +386,31 @@
             "source": "PyTorch_Training_Loop",
             "target": "Python_PyTorch_Models",
             "type": "part_of"
+        },
+        {
+            "source": "PyTorch_Optuna_Tuning",
+            "target": "Python_PyTorch_Models",
+            "type": "implements"
+        },
+        {
+            "source": "PyTorch_Optuna_Tuning",
+            "target": "GrueyModel_Architecture",
+            "type": "tunes"
+        },
+        {
+            "source": "PyTorch_Optuna_Tuning",
+            "target": "TabularTransformerModel_Architecture",
+            "type": "tunes"
+        },
+        {
+            "source": "PyTorch_Optuna_Tuning",
+            "target": "Train_Val_Test_Split",
+            "type": "uses"
+        },
+        {
+            "source": "Train_Val_Test_Split",
+            "target": "Python_PyTorch_Models",
+            "type": "methodology_for"
         }
     ],
     "observations": [
@@ -918,6 +953,36 @@
             "entity_id": "PyTorch_Training_Loop",
             "attribute": "verification_timestamp",
             "value": "2024-07-26T18:15:00Z"
+        },
+        {
+            "entity_id": "PyTorch_Optuna_Tuning",
+            "attribute": "status",
+            "value": "Implemented"
+        },
+        {
+            "entity_id": "PyTorch_Optuna_Tuning",
+            "attribute": "tool_used",
+            "value": "Optuna"
+        },
+        {
+            "entity_id": "PyTorch_Optuna_Tuning",
+            "attribute": "implementation_files",
+            "value": "src/python/training/gruey.py, src/python/training/tranny.py"
+        },
+        {
+            "entity_id": "PyTorch_Optuna_Tuning",
+            "attribute": "purpose",
+            "value": "To find optimal hyperparameters (e.g., learning rate, model dimensions, batch size) for PyTorch models based on validation set performance."
+        },
+        {
+            "entity_id": "Train_Val_Test_Split",
+            "attribute": "description",
+            "value": "Data is split into Train (for model weight updates during a trial), Validation (for evaluating hyperparameters during a trial), and Test (held out for final unbiased evaluation after tuning)."
+        },
+        {
+            "entity_id": "Train_Val_Test_Split",
+            "attribute": "implementation_details",
+            "value": "Typically involves a two-step split: first separate the Test set, then split the remainder into Train and Validation sets."
         }
     ]
 }

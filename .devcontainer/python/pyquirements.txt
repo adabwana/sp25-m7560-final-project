@@ -21,5 +21,6 @@ transformers
 
 # utils
 mlflow
+optuna
 pytest
 ipykernel

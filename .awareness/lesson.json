@@ -225,5 +225,45 @@
                 "conversion"
             ]
         }
+    },
+    {
+        "id": "LESSON_OPTUNA_NAMEERROR_OPTIM_001",
+        "type": "Lesson",
+        "name": "Resolving NameError for optim inside Optuna Objective",
+        "problem_pattern": {
+            "description": "When defining an optimizer inside an Optuna objective function using `optim.Adam(...)` after importing `torch.optim as optim` at the top level, a `NameError: name 'optim' is not defined` occurs during study execution.",
+            "error_messages": [
+                "NameError: name 'optim' is not defined",
+                "Trial X failed because of the following error: NameError..."
+            ],
+            "context": "Using Optuna to tune hyperparameters for a PyTorch model. The optimizer is instantiated within the objective function passed to `study.optimize()`."
+        },
+        "solution": {
+            "steps": [
+                "Explicitly reference the full module path when creating the optimizer inside the objective function.",
+                "Change `optimizer = optim.Adam(...)` to `optimizer = torch.optim.Adam(...)`."
+            ],
+            "verification": "The Optuna study runs without raising the NameError related to the optimizer."
+        },
+        "environment": {
+            "packages": [
+                "optuna",
+                "torch"
+            ],
+            "python_version": "3.11",
+            "os": "linux"
+        },
+        "metadata": {
+            "creation_date": "2025-04-13T04:45:00Z",
+            "last_updated_date": "2025-04-13T04:45:00Z",
+            "tags": [
+                "optuna",
+                "pytorch",
+                "hyperparameter tuning",
+                "NameError",
+                "scope",
+                "objective function"
+            ]
+        }
     }
 ]
