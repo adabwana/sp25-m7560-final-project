@@ -1,0 +1,164 @@
+---
+title: "Weighted Mods"
+author: "Jason Turk"
+date: "2025-04-15"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+``` {r}
+# --- Load Libraries ---
+# Using suppressPackageStartupMessages to minimize console noise
+suppressPackageStartupMessages(library(here)) # For locating files relative to project root
+suppressPackageStartupMessages(library(dplyr)) # For data manipulation
+suppressPackageStartupMessages(library(rsample)) # For data splitting and CV folds
+suppressPackageStartupMessages(library(tune)) # For hyperparameter tuning
+suppressPackageStartupMessages(library(yardstick)) # For model evaluation metrics
+suppressPackageStartupMessages(library(workflows)) # For combining recipes and models
+suppressPackageStartupMessages(library(parsnip)) # For model specifications
+suppressPackageStartupMessages(library(recipes)) # For preprocessing
+suppressPackageStartupMessages(library(readr)) # For reading/writing data
+suppressPackageStartupMessages(library(glue)) # For formatted string output
+
+# --- Parallel Processing Setup ---
+suppressPackageStartupMessages(library(doParallel))
+# --- Reduce cores for memory --- 
+num_cores <- parallel::detectCores(logical = FALSE) # Get physical cores
+num_cores_to_use <- 6 # Use a fixed, smaller number of cores
+# num_cores <- parallel::detectCores(logical = FALSE) # Get physical cores
+cat(glue::glue("\n--- Registering parallel backend with {num_cores_to_use} cores ---\n"))
+cl <- makePSOCKcluster(num_cores_to_use)
+registerDoParallel(cl)
+
+# --- Source Helper Functions ---
+# Construct full paths using here() for robustness
+source(here::here("src/r/utils/data_utils.R"))
+source(here::here("src/r/recipes/recipes.R"))
+source(here::here("src/r/models/models.R"))
+source(here::here("src/r/workflows/workflows.R"))
+source(here::here("src/r/tuning/tuning.R"))
+source(here::here("src/r/training/training.R"))
+source(here::here("src/r/evaluation/evaluation.R"))
+
+# --- Configuration ---
+# TODO: Move these to a config file/package (e.g., config::get())
+DATA_FILENAME <- "train_engineered.csv" # Use only the training data
+TEST_SPLIT_PROP <- 0.8 # Proportion of data for training set
+TARGET_VARIABLE <- "Duration_In_Min" # Or "Occupancy"
+CV_FOLDS <- 5 # Number of cross-validation folds
+SEED <- 3 # For reproducibility
+TUNING_METRIC <- "rmse" # Metric to select best hyperparameters (use "accuracy" or "roc_auc" for classification)
+# Features to drop (matching Python preprocess.py, excluding targets and date columns handled in recipe)
+FEATURES_TO_DROP <- c(
+    "Student_IDs", "Semester", "Class_Standing", "Major", "Expected_Graduation",
+    "Course_Name", "Course_Number", "Course_Type", "Course_Code_by_Thousands",
+    "Check_Out_Time", "Session_Length_Category"
+) # Add others as needed
+
+# Define metric set based on task (regression in this case)
+# TODO: Handle classification metrics if TARGET_VARIABLE changes
+MODEL_METRICS <- metric_set(rmse, rsq, mae)
+
+
+# --- Pipeline Execution ---
+
+set.seed(SEED)
+
+# 1. Load Data
+cat(glue::glue("--- Loading Data ({DATA_FILENAME}) ---\n\n"))
+full_data <- load_data(DATA_FILENAME)
+cat(glue::glue("Full data rows: {nrow(full_data)}\n\n"))
+
+# 2. Split Data into Training and Testing
+cat(glue::glue("--- Splitting Data (Train: {TEST_SPLIT_PROP*100}%, Test: {(1-TEST_SPLIT_PROP)*100}%) ---\n\n"))
+data_split <- rsample::initial_split(full_data, prop = TEST_SPLIT_PROP, strata = NULL) # Add strata if needed
+train_data <- rsample::training(data_split)
+test_data <- rsample::testing(data_split)
+cat(glue::glue("Training data rows: {nrow(train_data)}, Test data rows: {nrow(test_data)}\n\n"))
+
+# 3. Create Recipe
+cat(glue::glue("--- Creating Recipe for Target: {TARGET_VARIABLE} ---\n\n"))
+# NOTE: FEATURES_TO_DROP list is now correctly defined above
+recipe_obj <- create_recipe(full_data, TARGET_VARIABLE, FEATURES_TO_DROP)
+#print(recipe_obj) # Print summary of recipe steps
+
+prepped_recipe <- prep(recipe_obj, training = full_data)
+maintrain <- bake(prepped_recipe, new_data = full_data)
+```
+
+``` {r}
+testsize <- floor(0.2*nrow(students))
+set.seed(7560)
+hIND <- sample(1:nrow(maintrain), size = testsize)
+students <- maintrain[-hIND,]
+holdout <- maintrain[hIND,]
+
+studentsfull <- read.csv(here::here("data/processed/train_engineered.csv"))
+trainfull <- studentsfull[-hIND,]
+holdoutfull <- studentsfull[hIND,]
+```
+
+``` {r}
+full1 <- earth(Duration_In_Min ~ ., data = students, degree = 1)
+hfit1 <- predict(full1, newdata = holdout)
+toterror1 <- sum((hfit1 - holdout$Duration_In_Min)^2)/length(hfit1)
+sqrt(toterror1)
+```
+
+``` {r}
+w1 <- 1/2
+w2 <- 1-w1
+
+ID1 <- data.frame(ids = holdoutfull$Student_IDs, Duration_In_Min = hfit1)
+
+ID1$OtherVisits <- c()
+for (i in 1:nrow(ID1)) {
+  mask <- trainfull$Student_IDs == ID1$ids[i]
+  ID1$OtherVisits[i] <- mean(trainfull$Duration_In_Min[mask])
+}
+
+ID1$Weighted <- ifelse(is.nan(ID1$OtherVisits), ID1$Duration_In_Min,
+                      w1*ID1$Duration_In_Min + w2*ID1$OtherVisits)
+
+toterrorW1 <- sum((ID1$Weighted - holdout$Duration_In_Min)^2)/length(ID1$Weighted)
+sqrt(toterrorW1)
+```
+
+``` {r}
+num_cores <- detectCores(logical = FALSE)
+num_cores_to_use <- num_cores - 1
+cl <- makePSOCKcluster(num_cores_to_use)
+registerDoParallel(cl)
+
+tc2 <- trainControl(method = "cv", number = 5, search = "grid")
+full2 <- train(Duration_In_Min ~ ., data = students, method = "rf",
+               trControl = tc2, tuneLength = 3)
+hfit2 <- predict(full2, newdata = holdout)
+toterror2 <- sum((hfit2 - holdout$Duration_In_Min)^2)/length(hfit2)
+sqrt(toterror2)
+
+
+stopCluster(cl)
+```
+
+``` {r}
+w1 <- 1/2
+w2 <- 1-w1
+
+ID2 <- data.frame(ids = holdoutfull$Student_IDs, Duration_In_Min = hfit2)
+
+ID2$OtherVisits <- c()
+for (i in 1:nrow(ID2)) {
+  mask <- trainfull$Student_IDs == ID2$ids[i]
+  ID2$OtherVisits[i] <- mean(trainfull$Duration_In_Min[mask])
+}
+
+ID2$Weighted <- ifelse(is.nan(ID2$OtherVisits), ID$Duration_In_Min,
+                      w1*ID2$Duration_In_Min + w2*ID2$OtherVisits)
+
+toterrorW2 <- sum((ID2$Weighted - holdout$Duration_In_Min)^2)/length(ID2$Weighted)
+sqrt(toterrorW2)
+```

@@ -1,0 +1,141 @@
+---
+title: "Model Fitting Simple"
+author: "Jason Turk"
+date: "2025-04-14"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+``` {r}
+suppressPackageStartupMessages(library(here)) # For locating files relative to project root
+suppressPackageStartupMessages(library(dplyr)) # For data manipulation
+suppressPackageStartupMessages(library(rsample)) # For data splitting and CV folds
+suppressPackageStartupMessages(library(tune)) # For hyperparameter tuning
+suppressPackageStartupMessages(library(yardstick)) # For model evaluation metrics
+suppressPackageStartupMessages(library(workflows)) # For combining recipes and models
+suppressPackageStartupMessages(library(parsnip)) # For model specifications
+suppressPackageStartupMessages(library(recipes)) # For preprocessing
+suppressPackageStartupMessages(library(readr)) # For reading/writing data
+suppressPackageStartupMessages(library(glue)) # For formatted string output
+suppressPackageStartupMessages(library(doParallel))
+suppressPackageStartupMessages(library(caret))
+
+source(here::here("src/r/utils/data_utils.R"))
+source(here::here("src/r/recipes/recipes.R"))
+source(here::here("src/r/models/models.R"))
+source(here::here("src/r/workflows/workflows.R"))
+source(here::here("src/r/tuning/tuning.R"))
+source(here::here("src/r/training/training.R"))
+source(here::here("src/r/evaluation/evaluation.R"))
+```
+
+``` {r}
+studentsfull <- read.csv(here::here("data/processed/train_engineered.csv"))
+
+FEATURES_TO_DROP <- c(
+    "Student_IDs", "Semester", "Class_Standing", "Major", "Expected_Graduation",
+    "Course_Name", "Course_Number", "Course_Type", "Course_Code_by_Thousands",
+    "Check_Out_Time", "Session_Length_Category"
+) # Add others as needed
+
+dropcols <- which(names(studentsfull) %in% FEATURES_TO_DROP)
+students <- studentsfull[, -dropcols]
+
+CS <- sapply(students, is.numeric)
+studentSCALE <- students
+studentSCALE[CS] <- scale(students[CS])
+FAC <- sapply(students, is.character)
+students[,FAC] <- lapply(students[,FAC], as.factor) #main df is 'students'
+FACS <- sapply(studentSCALE, is.character)
+studentSCALE[,FACS] <- lapply(studentSCALE[,FACS], as.factor)
+#df with center-scaled numerical variables is 'studentSCALE'
+```
+
+``` {r}
+# MARS deg 1
+set.seed(7560)
+testInd <- createFolds(students$Duration_In_Min, k = 5)
+
+CVMSE1 <- c()
+for (i in 1:5) {
+  CV1 <- earth(Duration_In_Min ~ ., data = students[-testInd[[i]],],
+               degree = 1)
+  fitted1 <- predict(CV1, newdata = students[testInd[[i]],])
+  CVMSE1[i] <- sum((fitted1 - students$Duration_In_Min[testInd[[i]]])^2)/
+               length(testInd[[i]])
+}
+
+MSE1 <- sum(CVMSE1)/5
+RMSE1 <- sqrt(sum(CVMSE1)/5)
+RMSE1
+sqrt(var(CVMSE1))
+```
+
+``` {r}
+#MARS deg 2
+set.seed(7561) #7560 was anamolous
+testInd <- createFolds(students$Duration_In_Min, k = 5)
+
+CVMSE2 <- c()
+for (i in 1:5) {
+  CV2 <- earth(Duration_In_Min ~ ., data = students[-testInd[[i]],],
+               degree = 2)
+  fitted2 <- predict(CV2, newdata = students[testInd[[i]],])
+  CVMSE2[i] <- sum((fitted2 - students$Duration_In_Min[testInd[[i]]])^2)/
+               length(testInd[[i]])
+}
+
+MSE2 <- sum(CVMSE2)/5
+RMSE2 <- sqrt(sum(CVMSE2)/5)
+RMSE2
+sqrt(var(CVMSE2))
+```
+
+``` {r}
+# MARS deg 1 w/ student weighting
+
+set.seed(7560)
+testInd <- createFolds(students$Duration_In_Min, k = 5)
+
+IDLIST <- list()
+CVMSE1 <- c()
+for (i in 1:5) {
+  CV1 <- earth(Duration_In_Min ~ ., data = students[-testInd[[i]],],
+               degree = 1)
+  fitted1 <- predict(CV1, newdata = students[testInd[[i]],])
+  IDLIST[[i]] <- data.frame(Fold = i, ids = studentsfull$Student_IDs[testInd[[i]]],
+                            fitted1, TRUEy = students$Duration_In_Min[testInd[[i]]])
+}
+
+ID <- do.call(rbind, IDLIST)
+
+w1 <- 2/3
+w2 <- 1-w1
+
+ID$AveOtherVisits <- NA
+for (i in 1:nrow(ID)) {
+  current_id <- ID$ids[i]
+  current_fold <- ID$Fold[i]
+  
+  #Return predictions for the same ID in other folds
+  mask <- ID$ids == current_id & ID$Fold != current_fold
+  ID$AveOtherVisits[i] <- mean(ID$TRUEy[mask])
+}
+
+ID$Weighted <- ifelse(is.nan(ID$AveOtherVisits), ID$Duration_In_Min,
+                      w1*ID$Duration_In_Min + w2*ID$AveOtherVisits)
+
+CVMSE1W <- c()
+for (i in 1:5) {
+  CVMSE1W[i] <- sum((ID$Weighted[testInd[[i]]] -
+                     ID$TRUEy[testInd[[i]]])^2)/length(testInd[[i]])
+}
+
+MSE1W <- sum(CVMSE1W)/5
+RMSE1W <- sqrt(sum(CVMSE1W)/5)
+RMSE1W
+sqrt(var(CVMSE1W))
+```
