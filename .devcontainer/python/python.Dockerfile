@@ -6,6 +6,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     ca-certificates \
     curl \
+    gdal-bin \
+    libgdal-dev \
+    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 # Install a specific version of GDAL Python bindings compatible with system libgdal 3.6.2
@@ -29,8 +32,8 @@ USER $USERNAME
 
 # Add NVIDIA GPU support
 # UNCOMMENT IF YOU HAVE A GPU
-# ENV NVIDIA_VISIBLE_DEVICES=all
-# ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
+ENV NVIDIA_VISIBLE_DEVICES=all
+ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
 
 WORKDIR /workspaces
 

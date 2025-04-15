@@ -64,6 +64,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libtiff5-dev \
     libjpeg-dev \
     libgit2-dev \
+    gdal-bin \
+    libgdal-dev \
+    python3-gdal \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -84,7 +87,7 @@ USER $USERNAME
 
 # Add NVIDIA GPU support
 # UNCOMMENT IF YOU HAVE A GPU
-# ENV NVIDIA_VISIBLE_DEVICES=all
-# ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
+ENV NVIDIA_VISIBLE_DEVICES=all
+ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
 
 WORKDIR /workspaces
