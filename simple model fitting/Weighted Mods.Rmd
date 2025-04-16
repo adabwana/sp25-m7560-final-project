@@ -23,16 +23,6 @@ suppressPackageStartupMessages(library(recipes)) # For preprocessing
 suppressPackageStartupMessages(library(readr)) # For reading/writing data
 suppressPackageStartupMessages(library(glue)) # For formatted string output
 
-# --- Parallel Processing Setup ---
-suppressPackageStartupMessages(library(doParallel))
-# --- Reduce cores for memory --- 
-num_cores <- parallel::detectCores(logical = FALSE) # Get physical cores
-num_cores_to_use <- 6 # Use a fixed, smaller number of cores
-# num_cores <- parallel::detectCores(logical = FALSE) # Get physical cores
-cat(glue::glue("\n--- Registering parallel backend with {num_cores_to_use} cores ---\n"))
-cl <- makePSOCKcluster(num_cores_to_use)
-registerDoParallel(cl)
-
 # --- Source Helper Functions ---
 # Construct full paths using here() for robustness
 source(here::here("src/r/utils/data_utils.R"))
@@ -102,6 +92,7 @@ holdoutfull <- studentsfull[hIND,]
 ```
 
 ``` {r}
+#MARS (basic)
 full1 <- earth(Duration_In_Min ~ ., data = students, degree = 1)
 hfit1 <- predict(full1, newdata = holdout)
 toterror1 <- sum((hfit1 - holdout$Duration_In_Min)^2)/length(hfit1)
@@ -109,7 +100,7 @@ sqrt(toterror1)
 ```
 
 ``` {r}
-w1 <- 1/2
+w1 <- 2/3
 w2 <- 1-w1
 
 ID1 <- data.frame(ids = holdoutfull$Student_IDs, Duration_In_Min = hfit1)
@@ -128,6 +119,7 @@ sqrt(toterrorW1)
 ```
 
 ``` {r}
+#Random forests
 num_cores <- detectCores(logical = FALSE)
 num_cores_to_use <- num_cores - 1
 cl <- makePSOCKcluster(num_cores_to_use)
@@ -140,12 +132,11 @@ hfit2 <- predict(full2, newdata = holdout)
 toterror2 <- sum((hfit2 - holdout$Duration_In_Min)^2)/length(hfit2)
 sqrt(toterror2)
 
-
 stopCluster(cl)
 ```
 
 ``` {r}
-w1 <- 1/2
+w1 <- 2/3
 w2 <- 1-w1
 
 ID2 <- data.frame(ids = holdoutfull$Student_IDs, Duration_In_Min = hfit2)
@@ -156,9 +147,46 @@ for (i in 1:nrow(ID2)) {
   ID2$OtherVisits[i] <- mean(trainfull$Duration_In_Min[mask])
 }
 
-ID2$Weighted <- ifelse(is.nan(ID2$OtherVisits), ID$Duration_In_Min,
+ID2$Weighted <- ifelse(is.nan(ID2$OtherVisits), ID2$Duration_In_Min,
                       w1*ID2$Duration_In_Min + w2*ID2$OtherVisits)
 
 toterrorW2 <- sum((ID2$Weighted - holdout$Duration_In_Min)^2)/length(ID2$Weighted)
 sqrt(toterrorW2)
 ```
+
+``` {r}
+#Boosting
+num_cores <- detectCores(logical = FALSE)
+num_cores_to_use <- num_cores - 1
+cl <- makePSOCKcluster(num_cores_to_use)
+registerDoParallel(cl)
+
+tc3 <- trainControl(method = "cv", number = 5, search = "grid")
+full3 <- train(Duration_In_Min ~ ., data = students, method = "xgbTree",
+               trControl = tc3, tuneLength = 3, verbose = FALSE)
+hfit3 <- predict(full3, newdata = holdout)
+toterror3 <- sum((hfit3 - holdout$Duration_In_Min)^2)/length(hfit3)
+sqrt(toterror3)
+
+stopCluster(cl)
+```
+
+``` {r}
+w1 <- 2/3
+w2 <- 1-w1
+
+ID3 <- data.frame(ids = holdoutfull$Student_IDs, Duration_In_Min = hfit3)
+
+ID3$OtherVisits <- c()
+for (i in 1:nrow(ID3)) {
+  mask <- trainfull$Student_IDs == ID3$ids[i]
+  ID3$OtherVisits[i] <- mean(trainfull$Duration_In_Min[mask])
+}
+
+ID3$Weighted <- ifelse(is.nan(ID3$OtherVisits), ID3$Duration_In_Min,
+                      w1*ID3$Duration_In_Min + w2*ID3$OtherVisits)
+
+toterrorW3 <- sum((ID3$Weighted - holdout$Duration_In_Min)^2)/length(ID3$Weighted)
+sqrt(toterrorW3)
+```
+
