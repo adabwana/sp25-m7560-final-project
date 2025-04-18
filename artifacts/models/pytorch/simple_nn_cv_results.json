@@ -1,0 +1,62 @@
+[
+    {
+        "fold": 1,
+        "best_val_loss_scaled": 1.0983976848044639,
+        "best_val_rmse_original": 62.76271736792672,
+        "best_val_mae_original": 40.75078582763672,
+        "best_val_r2_original": 0.05937671661376953,
+        "metrics": {
+            "rmse_original": 62.80654511573615,
+            "mae_original": 40.833614349365234,
+            "r2_original": 0.05806255340576172
+        }
+    },
+    {
+        "fold": 2,
+        "best_val_loss_scaled": 0.8203004386465428,
+        "best_val_rmse_original": 56.35059148009229,
+        "best_val_mae_original": 38.77489471435547,
+        "best_val_r2_original": 0.046177685260772705,
+        "metrics": {
+            "rmse_original": 56.43411491440151,
+            "mae_original": 38.80945587158203,
+            "r2_original": 0.043348073959350586
+        }
+    },
+    {
+        "fold": 3,
+        "best_val_loss_scaled": 1.0238344459715536,
+        "best_val_rmse_original": 61.80933818695501,
+        "best_val_mae_original": 40.35443115234375,
+        "best_val_r2_original": 0.028398871421813965,
+        "metrics": {
+            "rmse_original": 61.81857236035037,
+            "mae_original": 40.43135070800781,
+            "r2_original": 0.028108537197113037
+        }
+    },
+    {
+        "fold": 4,
+        "best_val_loss_scaled": 0.9842868901915469,
+        "best_val_rmse_original": 60.437532316433966,
+        "best_val_mae_original": 39.7296142578125,
+        "best_val_r2_original": 0.0698845386505127,
+        "metrics": {
+            "rmse_original": 60.501259026155815,
+            "mae_original": 39.70578384399414,
+            "r2_original": 0.06792205572128296
+        }
+    },
+    {
+        "fold": 5,
+        "best_val_loss_scaled": 0.875628701205981,
+        "best_val_rmse_original": 57.9846044693654,
+        "best_val_mae_original": 39.643795013427734,
+        "best_val_r2_original": 0.03246498107910156,
+        "metrics": {
+            "rmse_original": 57.99901711519019,
+            "mae_original": 39.61563491821289,
+            "r2_original": 0.031983911991119385
+        }
+    }
+]

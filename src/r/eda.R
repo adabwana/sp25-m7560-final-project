@@ -3,6 +3,7 @@ library(here)
 library(readr)
 library(lubridate)
 library(dplyr)
+install.packages("skimr")
 library(skimr)  
 library(DataExplorer)
 

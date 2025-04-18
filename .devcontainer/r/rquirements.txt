@@ -34,3 +34,7 @@ here
 readr
 jsonlite
 doParallel
+
+
+skimr
+DataExplorer
