@@ -1,0 +1,13 @@
+# Production-specific overrides (inherits from default.yml implicitly via config.yml)
+data:
+  test_split_prop: 0.8  # Use more data for training in production
+  
+model:
+  cv_folds: 10  # More folds for robust validation
+  
+parallel:
+  num_cores: 8  # Use more cores in production if available
+  
+logging:
+  level: "INFO"  # Less verbose logging in production
+  file: "logs/pipeline_prod.log"  # Separate log file for production 

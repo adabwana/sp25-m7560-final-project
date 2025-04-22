@@ -1,0 +1,12 @@
+# Development-specific overrides (inherits from default.yml implicitly via config.yml)
+data:
+  test_split_prop: 0.7  # Smaller split for faster development
+  
+model:
+  cv_folds: 3  # Fewer folds for faster iteration
+  
+parallel:
+  num_cores: 4  # Use fewer cores in development
+  
+logging:
+  level: "DEBUG"  # More verbose logging in development 

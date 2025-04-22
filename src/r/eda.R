@@ -3,22 +3,21 @@ library(here)
 library(readr)
 library(lubridate)
 library(dplyr)
-library(skimr)  
-library(DataExplorer)
-
-library(fitdistrplus)
 library(ggplot2)
-library(gridExtra)
-library(GGally)
 
+library(tseries) # For time series analysis (ACF, Ljung-Box, ADF) adf.test
+library(lmtest) # For Durbin-Watson test
+library(patchwork) # For combining plots
+library(skimr) # For summary statistics
 
 theme_set(theme_bw())
 
 # -----------------------------------------------------------------------------
-# READ RAW DATA
+# READ DATA
 # -----------------------------------------------------------------------------
 # here() starting path is root of the project
 data_raw <- readr::read_csv(here("data", "raw", "LC_train.csv"))
+data_eng <- readr::read_csv(here("data", "processed", "train_engineered.csv"))
 
 lc_data <- data_raw %>%
   # Convert dates and times to appropriate formats
@@ -28,31 +27,28 @@ lc_data <- data_raw %>%
     Check_Out_Time = hms::as_hms(Check_Out_Time)
   ) %>%
   # Sort in ascending order
-  arrange(Check_In_Date, Check_In_Time) %>% 
+  arrange(Check_In_Date, Check_In_Time) %>%
   # Group by each date
   group_by(Check_In_Date) %>%
   mutate(
-    # Cumulative check-ins 
+    # Cumulative check-ins
     Cum_Arrivals = row_number(), # - 1,  MINUS ONE TO START AT 0 OCCUPANCY AS 1st PERSON ARRIVES
     # Cumulative check-outs
     Cum_Departures = sapply(seq_along(Check_In_Time), function(i) {
-      sum(!is.na(Check_Out_Time[1:i]) & 
-          Check_Out_Time[1:i] <= Check_In_Time[i])
+      sum(!is.na(Check_Out_Time[1:i]) &
+        Check_Out_Time[1:i] <= Check_In_Time[i])
     }),
     # Current occupancy
     Occupancy = Cum_Arrivals - Cum_Departures,
     # Course_Code_by_Thousands = as.factor(Course_Code_by_Thousands)
   ) %>%
-  ungroup() #%>%
-  # Remove intermediate columns
-  # select(-c(Check_Out_Time, Cum_Arrivals, Cum_Departures))  
+  ungroup() # %>%
+# Remove intermediate columns
+# select(-c(Check_Out_Time, Cum_Arrivals, Cum_Departures))
 
 # Basic overview of the data
 glimpse(lc_data)
-
-# Get comprehensive summary statistics
-skim(lc_data)
-DataExplorer::plot_intro(lc_data)
+glimpse(data_eng)
 
 # Check for missing values
 missing_values <- colSums(is.na(lc_data))
@@ -60,113 +56,191 @@ print("Missing values by column:")
 print(missing_values[missing_values > 0])
 
 # Basic visualizations
-# Plot distribution of numeric columns
-DataExplorer::plot_histogram(lc_data)
-DataExplorer::plot_bar(lc_data)
-DataExplorer::plot_boxplot(lc_data, by = "Class_Standing")
 
-# Correlation analysis of numeric columns
-DataExplorer::plot_correlation(lc_data)
-DataExplorer::plot_prcomp(lc_data, variance_cap = 0.9, nrow = 2L, ncol = 2L)
-
-# -----------------------------------------------------------------------------
-# ENGINEERED DATA EXPLORATION (AFTER RUNNING FEATURE ENGINEERING SCRIPT)
-# -----------------------------------------------------------------------------
-
-# Read the engineered data
-data_eng <- readr::read_csv(here("data", "processed", "train_engineered.csv"))
-
-View(data_eng)
-
-# Basic overview of the data
-glimpse(data_eng)
-
-# Get comprehensive summary statistics
-skim(data_eng)
-DataExplorer::plot_intro(data_eng) 
 
 # =================================================================================
-# PART A: DURATION IN MINUTES DISTRIBUTION ANALYSIS
+# PART A: DURATION IN MINUTES SEQUENTIAL DEPENDENCIES
 # =================================================================================
 
-descdist(data_eng$Duration_In_Min, boot = 1000)
+# Combine date and time for ordering and plotting
+# Ensure lc_data is sorted by Check_In_Date and Check_In_Time already from lines 23-24
+lc_data_ordered <- lc_data %>%
+  mutate(Check_In_DateTime = as.POSIXct(paste(Check_In_Date, Check_In_Time), format = "%Y-%m-%d %H:%M:%S")) %>%
+  # Arrange again just to be absolutely sure, especially if lc_data was modified
+  arrange(Check_In_DateTime)
 
-fitW <- fitdist(data_eng$Duration_In_Min, "weibull")
-fitE <- fitdist(data_eng$Duration_In_Min, "exp", lower = c(0))
-fitG <- fitdist(data_eng$Duration_In_Min, "gamma", 
-                start = list(scale = 1, shape = 1), lower = c(0, 0))
-fitN <- fitdist(data_eng$Duration_In_Min, "norm")
-fitLn <- fitdist(data_eng$Duration_In_Min, "lnorm")
+# 1. Visual Inspection: Plot Duration over Time
+g_duration_seq <- ggplot(lc_data_ordered, aes(x = Check_In_DateTime, y = Duration_In_Min)) +
+  geom_line(alpha = 0.5, color = "steelblue") +
+  # geom_point(alpha = 0.1, size = 0.5) + # Optional: Add points if needed
+  labs(
+    title = "Sequence Plot of Session Durations",
+    x = "Check-In Time",
+    y = "Duration (Minutes)"
+  ) +
+  theme_minimal()
 
-dc <- denscomp(list(fitW, fitE, fitG, fitN, fitLn), plotstyle = "ggplot", breaks = 30,
-         legendtext = c("Weibull", "Exp", "Gamma", "Normal", "Log Normal")) +
-     scale_y_continuous(labels = scales::label_number(scale = 1e3, suffix = "(1/K)", big.mark = ",")) + 
-  theme(legend.position = "none")
+print(g_duration_seq)
 
-cc <- cdfcomp(list(fitW, fitE, fitG, fitN, fitLn), plotstyle = "ggplot",
-         legendtext = c("Weibull", "Exp", "Gamma", "Normal", "Log Normal"))
+# Save the plot
+# ggsave(here("presentation", "images", "eda", "duration_sequence.jpg"), g_duration_seq, width = 12, height = 6, dpi = 300)
 
-qqc <- qqcomp(list(fitW, fitE, fitG, fitN, fitLn), plotstyle = "ggplot",
-         legendtext = c("Weibull", "Exp", "Gamma", "Normal", "Log Normal")) + 
-  theme(legend.position = "none")
 
-ppc <- ppcomp(list(fitW, fitE, fitG, fitN, fitLn), plotstyle = "ggplot",
-         legendtext = c("Weibull", "Exp", "Gamma", "Normal", "Log Normal"))
+# 2. Autocorrelation Analysis
+# Create a time series object - ensure no NA values if required by functions
+# Handle potential NAs in Duration_In_Min if any exist, e.g., na.omit or imputation
+duration_ts <- ts(lc_data_ordered$Duration_In_Min) # Assumes lc_data_ordered has no NA duration
 
-# Create directories recursively if they don't exist
-dir.create(here("presentation", "images", "eda"), recursive = TRUE, showWarnings = FALSE)
+# ACF Plot
+# Suppress plot output from acf/pacf directly to potentially combine later
+acf_result <- acf(duration_ts, main = "ACF for Session Durations", lag.max = 50, plot = FALSE)
+pacf_result <- pacf(duration_ts, main = "PACF for Session Durations", lag.max = 50, plot = FALSE)
 
-# For Duration Analysis
-grid_title <- grid::textGrob("Duration Distribution Analysis", gp = grid::gpar(fontsize = 14))
-g1 <- gridExtra::grid.arrange(
-  dc, cc, qqc, ppc, 
-  ncol = 2, nrow = 2, 
-  widths = c(1.5, 2),
-  top = grid_title
-)
+# Plot ACF and PACF using ggplot for better aesthetics if desired or just use base R plots
+# Base R plots:
+par(mfrow = c(1, 2)) # Arrange plots side-by-side
+plot(acf_result)
+plot(pacf_result)
+par(mfrow = c(1, 1)) # Reset plotting layout
 
-# Save Duration Distribution plot
-ggsave(here("presentation", "images", "eda", "duration_distribution.jpg"), g1, width = 12, height = 8, dpi = 300)
+# Portmanteau Tests (Ljung-Box)
+# Test for autocorrelation up to various lags
+ljung_box_test_lag10 <- Box.test(duration_ts, lag = 10, type = "Ljung-Box")
+ljung_box_test_lag20 <- Box.test(duration_ts, lag = 20, type = "Ljung-Box")
+ljung_box_test_lag50 <- Box.test(duration_ts, lag = 50, type = "Ljung-Box")
+# Box.test(duration_ts, lag = 100, type = "Ljung-Box")
+
+print("--- Ljung-Box Test Results (Duration) ---")
+print(paste("Lag 10:", sprintf("X-squared = %.3f, df = %d, p-value = %.3g", ljung_box_test_lag10$statistic, ljung_box_test_lag10$parameter, ljung_box_test_lag10$p.value)))
+print(paste("Lag 20:", sprintf("X-squared = %.3f, df = %d, p-value = %.3g", ljung_box_test_lag20$statistic, ljung_box_test_lag20$parameter, ljung_box_test_lag20$p.value)))
+print(paste("Lag 50:", sprintf("X-squared = %.3f, df = %d, p-value = %.3g", ljung_box_test_lag50$statistic, ljung_box_test_lag50$parameter, ljung_box_test_lag50$p.value)))
+# Interpretation: Small p-values reject the null hypothesis of independence, suggesting serial correlation.
+
+
+# 3. Grouping by Attributes - Placeholder/Future Work
+# Example: Check ACF within groups (e.g., by Student_IDs)
+# grouped_acf <- lc_data_ordered %>%
+#   group_by(Student_IDs) %>%
+#   summarise(acf_results = list(acf(Duration_In_Min, plot=FALSE)), .groups = 'drop')
+# This can be complex to interpret and visualize collectively. Start with overall trend.
+
+# plot(grouped_acf$acf_results[[7]])
+
+# 4. Formal Statistical Tests
+
+# Durbin-Watson Test: Assess autocorrelation in residuals of a model.
+# Let's fit a simple model: Duration ~ linear time trend
+# Use row number as a proxy for time index if Check_In_DateTime isn't suitable directly
+lc_data_ordered <- lc_data_ordered %>% mutate(time_index = row_number())
+simple_model <- lm(Duration_In_Min ~ time_index, data = lc_data_ordered)
+dw_test_result <- dwtest(simple_model)
+print("--- Durbin-Watson Test Results (Duration ~ Time Index) ---")
+print(dw_test_result)
+# Interpretation: Value close to 2 suggests no first-order autocorrelation in residuals.
+# Values < 2 suggest positive autocorrelation, > 2 suggest negative autocorrelation.
+
+# Augmented Dickey-Fuller Test: Check for stationarity.
+adf_test_result <- adf.test(duration_ts, alternative = "stationary")
+print("--- Augmented Dickey-Fuller Test Results (Duration) ---")
+print(adf_test_result)
+# Interpretation: Small p-value suggests rejecting the null hypothesis (non-stationarity),
+# indicating the time series is likely stationary.
+
+
+# 5. Domain Knowledge and Experimentation - Interpretation
+# Based on ACF, Ljung-Box, DW, and ADF tests, interpret the findings.
+# Significant autocorrelation (ACF spikes, small Ljung-Box p-value) suggests temporal dependence.
+# Stationarity (small ADF p-value) doesn't rule out autocorrelation.
+
+# --- END OF DURATION SEQUENTIAL DEPENDENCY ANALYSIS ---
+
 
 # =================================================================================
 # PART B: OCCUPANCY DISTRIBUTION ANALYSIS
 # =================================================================================
 
-descdist(data_eng$Occupancy, boot = 1000)
+# 1. Visual Inspection: Plot Duration over Time
+g_occupancy_seq <- ggplot(lc_data_ordered, aes(x = Check_In_DateTime, y = Occupancy)) +
+  geom_line(alpha = 0.5, color = "steelblue") +
+  # geom_point(alpha = 0.1, size = 0.5) + # Optional: Add points if needed
+  labs(
+    title = "Sequence Plot of Session Durations",
+    x = "Check-In Time",
+    y = "Occupancy"
+  ) +
+  theme_minimal()
 
-fitW <- fitdist(data_eng$Occupancy, "weibull")
-fitE <- fitdist(data_eng$Occupancy, "exp", lower = c(0))
-fitG <- fitdist(data_eng$Occupancy, "gamma", 
-                start = list(scale = 1, shape = 1), lower = c(0, 0))
-fitN <- fitdist(data_eng$Occupancy, "norm")
-fitLn <- fitdist(data_eng$Occupancy, "lnorm")
+print(g_occupancy_seq)
 
-dc <- denscomp(list(fitW, fitE, fitG, fitN, fitLn), plotstyle = "ggplot", breaks = 21,
-         legendtext = c("Weibull", "Exp", "Gamma", "Normal", "Log Normal")) +
-     scale_y_continuous(labels = scales::label_number(scale = 1e3, suffix = "(1/K)", big.mark = ",")) + 
-  theme(legend.position = "none")
+# Save the plot
+# ggsave(here("presentation", "images", "eda", "duration_sequence.jpg"), g_duration_seq, width = 12, height = 6, dpi = 300)
 
-cc <- cdfcomp(list(fitW, fitE, fitG, fitN, fitLn), plotstyle = "ggplot",
-         legendtext = c("Weibull", "Exp", "Gamma", "Normal", "Log Normal"))
 
-qqc <- qqcomp(list(fitW, fitE, fitG, fitN, fitLn), plotstyle = "ggplot",
-         legendtext = c("Weibull", "Exp", "Gamma", "Normal", "Log Normal")) + 
-  theme(legend.position = "none")
+# 2. Autocorrelation Analysis
+# Create a time series object - ensure no NA values if required by functions
+# Handle potential NAs in Duration_In_Min if any exist, e.g., na.omit or imputation
+occupancy_ts <- ts(lc_data_ordered$Occupancy) # Assumes lc_data_ordered has no NA duration
 
-ppc <- ppcomp(list(fitW, fitE, fitG, fitN, fitLn), plotstyle = "ggplot",
-         legendtext = c("Weibull", "Exp", "Gamma", "Normal", "Log Normal"))
+# ACF Plot
+# Suppress plot output from acf/pacf directly to potentially combine later
+acf_result <- acf(occupancy_ts, main = "ACF for Session Durations", lag.max = 50, plot = FALSE)
+pacf_result <- pacf(occupancy_ts, main = "PACF for Session Durations", lag.max = 50, plot = FALSE)
 
-# For Occupancy Analysis
-grid_title <- grid::textGrob("Occupancy Distribution Analysis", gp = grid::gpar(fontsize = 14))
-g2 <- gridExtra::grid.arrange(
-  dc, cc, qqc, ppc, 
-  ncol = 2, nrow = 2, 
-  widths = c(1.5, 2),
-  top = grid_title
-)
+# Plot ACF and PACF using ggplot for better aesthetics if desired or just use base R plots
+# Base R plots:
+par(mfrow = c(1, 2)) # Arrange plots side-by-side
+plot(acf_result)
+plot(pacf_result)
+par(mfrow = c(1, 1)) # Reset plotting layout
 
-# Save Occupancy Distribution plot
-ggsave(here("presentation", "images", "eda", "occupancy_distribution.jpg"), g2, width = 12, height = 8, dpi = 300)
+# Portmanteau Tests (Ljung-Box)
+# Test for autocorrelation up to various lags
+ljung_box_test_lag10 <- Box.test(occupancy_ts, lag = 10, type = "Ljung-Box")
+ljung_box_test_lag20 <- Box.test(occupancy_ts, lag = 20, type = "Ljung-Box")
+ljung_box_test_lag50 <- Box.test(occupancy_ts, lag = 50, type = "Ljung-Box")
+# Box.test(duration_ts, lag = 100, type = "Ljung-Box")
+
+print("--- Ljung-Box Test Results (Occupancy) ---")
+print(paste("Lag 10:", sprintf("X-squared = %.3f, df = %d, p-value = %.3g", ljung_box_test_lag10$statistic, ljung_box_test_lag10$parameter, ljung_box_test_lag10$p.value)))
+print(paste("Lag 20:", sprintf("X-squared = %.3f, df = %d, p-value = %.3g", ljung_box_test_lag20$statistic, ljung_box_test_lag20$parameter, ljung_box_test_lag20$p.value)))
+print(paste("Lag 50:", sprintf("X-squared = %.3f, df = %d, p-value = %.3g", ljung_box_test_lag50$statistic, ljung_box_test_lag50$parameter, ljung_box_test_lag50$p.value)))
+# Interpretation: Small p-values reject the null hypothesis of independence, suggesting serial correlation.
+
+
+# 3. Grouping by Attributes - Placeholder/Future Work
+# Example: Check ACF within groups (e.g., by Student_IDs)
+# grouped_acf <- lc_data_ordered %>%
+#   group_by(Student_IDs) %>%
+#   summarise(acf_results = list(acf(Duration_In_Min, plot=FALSE)), .groups = 'drop')
+# This can be complex to interpret and visualize collectively. Start with overall trend.
+
+# plot(grouped_acf$acf_results[[7]])
+
+# 4. Formal Statistical Tests
+
+# Durbin-Watson Test: Assess autocorrelation in residuals of a model.
+# Let's fit a simple model: Duration ~ linear time trend
+# Use row number as a proxy for time index if Check_In_DateTime isn't suitable directly
+lc_data_ordered <- lc_data_ordered %>% mutate(time_index = row_number())
+simple_model <- lm(Duration_In_Min ~ time_index, data = lc_data_ordered)
+dw_test_result <- dwtest(simple_model)
+print("--- Durbin-Watson Test Results (Occupancy ~ Time Index) ---")
+print(dw_test_result)
+# Interpretation: Value close to 2 suggests no first-order autocorrelation in residuals.
+# Values < 2 suggest positive autocorrelation, > 2 suggest negative autocorrelation.
+
+# Augmented Dickey-Fuller Test: Check for stationarity.
+adf_test_result <- adf.test(occupancy_ts, alternative = "stationary")
+print("--- Augmented Dickey-Fuller Test Results (Occupancy) ---")
+print(adf_test_result)
+# Interpretation: Small p-value suggests rejecting the null hypothesis (non-stationarity),
+# indicating the time series is likely stationary.
+
+
+# 5. Domain Knowledge and Experimentation - Interpretation
+# Based on ACF, Ljung-Box, DW, and ADF tests, interpret the findings.
+# Significant autocorrelation (ACF spikes, small Ljung-Box p-value) suggests temporal dependence.
+# Stationarity (small ADF p-value) doesn't rule out autocorrelation.
 
 
 # =================================================================================
@@ -196,8 +270,10 @@ data_pairs_numeric <- data_eng %>%
   # Remove the helper columns
   dplyr::select(-Q1, -Q2, -Q3, -IQR, -Upper_Fence, -Way_Out, -Fugedaboudit) %>%
   # Reorder final columns
-  dplyr::select(-Duration_In_Min, -Occupancy, -Session_Length_Category, 
-                Duration_In_Min, Occupancy, Session_Length_Category)
+  dplyr::select(
+    -Duration_In_Min, -Occupancy, -Session_Length_Category,
+    Duration_In_Min, Occupancy, Session_Length_Category
+  )
 
 # Let's check the distribution
 print("Distribution of Session Length Categories:")
@@ -205,19 +281,14 @@ print(table(data_pairs_numeric$Session_Length_Category))
 
 # And verify some statistics
 print("Summary of Duration by Category:")
-print(tapply(data_pairs_numeric$Duration_In_Min, 
-            data_pairs_numeric$Session_Length_Category, 
-            summary))
+print(tapply(
+  data_pairs_numeric$Duration_In_Min,
+  data_pairs_numeric$Session_Length_Category,
+  summary
+))
 
 quantile(data_pairs_numeric$Duration_In_Min, 0.25)
 quantile(data_pairs_numeric$Duration_In_Min, 0.75)
-data_pairs_numeric %>%
-  ggpairs(aes(color = Session_Length_Category, alpha = 0.5),
-          columns = 1:(ncol(.) - 1),  # All columns except Session_Length_Category
-          progress = FALSE) +
-  theme_bw() +
-  theme(axis.text = element_text(size = 8),
-        strip.text = element_text(size = 8))
 
 data_pairs_categorical <- data_eng %>%
   dplyr::select(all_of(raw_colnames), Session_Length_Category, Occupancy) %>%
@@ -241,19 +312,15 @@ data_pairs_categorical <- data_eng %>%
   # Remove the helper columns
   dplyr::select(-Q1, -Q2, -Q3, -IQR, -Upper_Fence, -Way_Out, -Fugedaboudit) %>%
   # Reorder final columns
-  dplyr::select(-Duration_In_Min, -Occupancy, -Session_Length_Category, 
-                Duration_In_Min, Occupancy, Session_Length_Category)
+  dplyr::select(
+    -Duration_In_Min, -Occupancy, -Session_Length_Category,
+    Duration_In_Min, Occupancy, Session_Length_Category
+  )
 
 data_pairs_categorical2 <- data_pairs_categorical %>%
-  dplyr::select(where(~n_distinct(.) <= 10), Duration_In_Min, Occupancy)
+  dplyr::select(where(~ n_distinct(.) <= 10), Duration_In_Min, Occupancy)
 
 # Verify the results
 data_pairs_categorical %>%
   summarise(across(everything(), n_distinct)) %>%
   glimpse()
-
-ggpairs(data_pairs_categorical2, aes(color = Session_Length_Category, alpha = 0.5),
-        progress = FALSE) +
-  theme_bw() +
-  theme(axis.text = element_text(size = 8),
-        strip.text = element_text(size = 8))

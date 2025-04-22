@@ -1,0 +1,8 @@
+default:
+  inherits: default.yml
+
+development:
+  inherits: [default.yml, dev.yml]
+
+production:
+  inherits: [default.yml, prod.yml]
