@@ -266,8 +266,7 @@ for (model_name in top_models_ranked$model_name) {
     all_holdout_results[[model_name]] <- holdout_fit
 
     if (is.null(holdout_fit)) {
-        cat("--- Skipping model holdout evaluation due to last_fit() failure ---
-")
+        cat("--- Skipping model holdout evaluation due to last_fit() failure ---")
         next
     }
 
@@ -275,20 +274,15 @@ for (model_name in top_models_ranked$model_name) {
     holdout_metrics <- collect_metrics(holdout_fit)
     all_holdout_metrics[[model_name]] <- holdout_metrics
 
-    cat("--- Holdout Set Metrics: ---
-")
+    cat("--- Holdout Set Metrics: ---")
     print(holdout_metrics)
 
-    cat(glue::glue("--- Finished Holdout Evaluation: {model_name} ---
-"))
+    cat(glue::glue("--- Finished Holdout Evaluation: {model_name} ---"))
 } # --- End Holdout Evaluation Loop ---
 
 
 # --- Summarize Holdout Results ---
-cat(glue::glue("
-
-=== Overall Holdout Set Performance Summary (Top {nrow(top_models_ranked)} Models) ===
-"))
+cat(glue::glue("=== Overall Holdout Set Performance Summary (Top {nrow(top_models_ranked)} Models) ==="))
 
 best_holdout_model_name <- NULL # Initialize
 best_holdout_model_object <- NULL # Initialize
@@ -320,39 +314,54 @@ if (length(all_holdout_metrics) > 0) {
     # Find best model based on the primary tuning metric ON THE HOLDOUT SET
     if (nrow(summary_holdout_metrics) > 0) {
         best_holdout_model_summary <- summary_holdout_metrics %>%
-            slice(1) # Already sorted, take the first row
+            slice_head(n = 1)
 
         best_holdout_model_name <- best_holdout_model_summary %>% pull(model_name)
         best_holdout_metric_value <- best_holdout_model_summary %>% pull(.data[[TUNING_METRIC]])
 
-        cat(glue::glue("
-Best model based on holdout set {TUNING_METRIC}: {best_holdout_model_name} ({TUNING_METRIC} = {round(best_holdout_metric_value, 4)})\n"))
+        cat(glue::glue("Best model based on holdout set {TUNING_METRIC}: {best_holdout_model_name} ({TUNING_METRIC} = {round(best_holdout_metric_value, 4)})\n"))
 
-        # --- Save the Best Model (trained on Train/Val) ---
+        # --- Save the Best Model related artifacts (trained on Train/Val) ---
         if (!is.null(best_holdout_model_name) && best_holdout_model_name %in% names(all_holdout_results)) {
-            # Extract the workflow fitted on the train_val_data from the last_fit object
+            # Get the full last_fit result object for the best model
             best_holdout_fit_result <- all_holdout_results[[best_holdout_model_name]]
+            # Get the best hyperparameters tibble
+            best_holdout_params <- best_params_list[[best_holdout_model_name]]
 
-            if (!is.null(best_holdout_fit_result)) {
-                best_holdout_model_object <- extract_workflow(best_holdout_fit_result)
+            if (!is.null(best_holdout_fit_result) && !is.null(best_holdout_params)) {
+                # Extract the fitted workflow
+                best_holdout_model_workflow <- extract_workflow(best_holdout_fit_result)
 
                 # Format the metric value for filename
                 formatted_metric_value <- format(round(best_holdout_metric_value, 3), nsmall = 3) %>%
                     stringr::str_replace_all("\\.", "-") # Replace . with -
 
-                save_dir <- here::here("artifacts", "r", "models")
+                save_dir <- here::here(get_config_value(cfg, "paths.models")) # Use path from config
                 dir.create(save_dir, recursive = TRUE, showWarnings = FALSE)
-                # Construct filename including formatted metric value and indicating holdout selection
-                save_filename <- glue::glue("{TARGET_VARIABLE}_best_holdout_{TUNING_METRIC}_{formatted_metric_value}_{best_holdout_model_name}.rds")
-                save_path <- file.path(save_dir, save_filename)
 
-                cat(glue::glue("--- Saving best model's workflow ({best_holdout_model_name}), trained on Train/Val data, to {save_path} ---
-"))
-                saveRDS(best_holdout_model_object, file = save_path)
-                cat("--- Model workflow saved successfully ---
+                # --- Construct base filename ---
+                base_filename <- glue::glue("{TARGET_VARIABLE}_best_holdout_{TUNING_METRIC}_{formatted_metric_value}_{best_holdout_model_name}")
+
+                # --- Save the fitted workflow ---
+                workflow_save_path <- file.path(save_dir, paste0(base_filename, "_workflow.rds"))
+                cat(glue::glue("--- Saving best model's workflow to {workflow_save_path} ---\n"))
+                saveRDS(best_holdout_model_workflow, file = workflow_save_path)
+                cat("--- Workflow saved successfully ---\n")
+
+                # --- Save the last_fit object ---
+                last_fit_save_path <- file.path(save_dir, paste0(base_filename, "_last_fit.rds"))
+                cat(glue::glue("--- Saving best model's last_fit result to {last_fit_save_path} ---\n"))
+                saveRDS(best_holdout_fit_result, file = last_fit_save_path)
+                cat("--- last_fit result saved successfully ---\n")
+
+                # --- Save the best hyperparameters ---
+                params_save_path <- file.path(save_dir, paste0(base_filename, "_best_params.rds"))
+                cat(glue::glue("--- Saving best model's hyperparameters to {params_save_path} ---\n"))
+                saveRDS(best_holdout_params, file = params_save_path)
+                cat("--- Hyperparameters saved successfully ---
 ")
             } else {
-                warning(glue::glue("last_fit result for the best model '{best_holdout_model_name}' is NULL, cannot save workflow."), call. = FALSE)
+                warning(glue::glue("last_fit result or best parameters for the best model '{best_holdout_model_name}' is NULL, cannot save artifacts."), call. = FALSE)
             }
         } else {
             warning(glue::glue("Best holdout model name '{best_holdout_model_name}' not found in holdout results or is NULL, cannot save."), call. = FALSE)

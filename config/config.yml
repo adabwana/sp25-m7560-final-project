@@ -1,8 +1,40 @@
-default:
-  inherits: default.yml
+# Data Configuration
+data:
+  filename: "train_engineered.csv"
+  trainval_holdout_prop: 0.75
+  train_val_prop: 0.8
+  target_variable: "Duration_In_Min"  # Options: "Duration_In_Min" or "Occupancy"
+  features_to_drop:
+    - "Student_IDs"
+    - "Semester"
+    - "Class_Standing"
+    - "Major"
+    - "Expected_Graduation"
+    - "Course_Name"
+    - "Course_Number"
+    - "Course_Type"
+    - "Course_Code_by_Thousands"
+    - "Check_Out_Time"
+    - "Session_Length_Category"
 
-development:
-  inherits: [default.yml, dev.yml]
+# Model Configuration
+model:
+  seed: 3
+  cv_folds: 5
+  tuning_metric: "rmse"  # Use "accuracy" or "roc_auc" for classification
 
-production:
-  inherits: [default.yml, prod.yml]
+# Parallel Processing
+parallel:
+  enabled: true
+  num_cores: 3  # Fixed number for memory management
+
+# Paths
+paths:
+  artifacts: "artifacts/params/r"
+  models: "artifacts/models/r"
+  data: "data"
+
+# Logging
+logging:
+  level: "INFO"  # Options: DEBUG, INFO, WARN, ERROR
+  file: "logs/pipeline.log" 

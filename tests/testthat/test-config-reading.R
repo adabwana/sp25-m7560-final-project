@@ -1,98 +1,115 @@
 library(testthat)
-library(yaml)
-library(purrr) # For list manipulation, if needed
+library(yaml) # Use yaml directly in tests if needed, but primarily testing load_config
+# library(config) # No longer needed for load_config tests
 
-# Helper function to get fixture path
-fixture_path <- function(...) {
-    testthat::test_path("fixtures", ...)
-}
+# Source the utility functions to be tested
+source(here::here("src/r/utils/config_utils.R"))
 
-context("YAML Configuration File Reading")
+# Define absolute path to the fixture file
+fixture_file <- here::here("tests", "testthat", "fixtures", "config.yml")
 
-test_that("Can read a simple default config file directly", {
-    default_file <- fixture_path("sample_default.yml")
-    expect_true(file.exists(default_file), "Fixture file 'sample_default.yml' should exist.")
+context("Configuration Loading (yaml::read_yaml wrapper) and Value Retrieval")
 
-    config_content <- NULL
-    expect_no_error(config_content <- yaml::read_yaml(default_file))
+# --- Tests for load_config() ---
 
-    # Basic structure checks
-    expect_type(config_content, "list")
-    expect_named(config_content, c("data", "model", "paths"))
-    expect_named(config_content$data, c("filename", "target_variable", "features_to_drop"))
-    expect_named(config_content$model, c("seed", "cv_folds"))
+test_that("load_config() successfully reads the fixture config.yml via absolute path", {
+    cfg <- NULL
+    suppressMessages({
+        expect_no_error(cfg <- load_config(file = fixture_file))
+    })
 
-    # Value checks
-    expect_equal(config_content$data$target_variable, "TestTarget")
-    expect_equal(config_content$model$seed, 3)
-    expect_equal(config_content$paths$artifacts, "test_artifacts")
-    expect_length(config_content$data$features_to_drop, 2)
-    expect_equal(config_content$data$features_to_drop[[1]], "ID")
+    expect_type(cfg, "list")
+    # Fixture should NOT have top-level default key
+    expect_named(cfg, c("data", "model", "parallel", "paths", "logging"))
+    expect_equal(cfg$data$filename, "test_data.csv")
+    expect_equal(cfg$model$seed, 42)
+    expect_false(cfg$parallel$enabled)
 })
 
-test_that("Can read the main config file directly", {
-    config_file <- fixture_path("sample_config.yml")
-    expect_true(file.exists(config_file), "Fixture file 'sample_config.yml' should exist.")
-
-    config_content <- NULL
-    expect_no_error(config_content <- yaml::read_yaml(config_file))
-
-    # Basic structure checks
-    expect_type(config_content, "list")
-    expect_named(config_content, c("default", "testing"))
-    expect_named(config_content$default, c("inherits", "report_name"))
-    expect_named(config_content$testing, c("inherits", "model", "paths", "report_name"))
-    expect_named(config_content$testing$model, "cv_folds")
-    expect_named(config_content$testing$paths, "logs")
-
-
-    # Value checks
-    expect_equal(config_content$default$inherits, "sample_default.yml")
-    expect_equal(config_content$default$report_name, "default_report")
-    expect_equal(config_content$testing$inherits, "sample_default.yml")
-    expect_equal(config_content$testing$model$cv_folds, 2)
-    expect_equal(config_content$testing$paths$logs, "test_logs")
-    expect_equal(config_content$testing$report_name, "testing_report")
+test_that("load_config() handles relative path from project root", {
+    # Assumes test is run from project root
+    relative_path <- "tests/testthat/fixtures/config.yml"
+    cfg <- NULL
+    suppressMessages({
+        expect_no_error(cfg <- load_config(file = relative_path))
+    })
+    expect_type(cfg, "list")
+    expect_equal(cfg$data$filename, "test_data.csv")
 })
 
-# Optional: Test manual merging simulation
-test_that("Can manually simulate config merging (default)", {
-    default_content <- yaml::read_yaml(fixture_path("sample_default.yml"))
-    config_content <- yaml::read_yaml(fixture_path("sample_config.yml"))
-
-    # Simulate 'default' environment merge
-    # In this case, 'default' only adds 'report_name' and inherits 'sample_default.yml'
-    # A simple merge might just take the default_content and add the unique fields from config$default
-    merged_default <- default_content
-    merged_default$report_name <- config_content$default$report_name # Add the specific field
-
-    # Check the manually merged structure
-    expect_equal(merged_default$data$target_variable, "TestTarget")
-    expect_equal(merged_default$model$cv_folds, 7)
-    expect_equal(merged_default$report_name, "default_report")
+test_that("load_config() uses default path if none provided", {
+    # This test requires the actual config/config.yml to exist and be readable
+    # It might be better to mock this or skip if main config isn't guaranteed
+    # For now, let's assume it exists for a basic check
+    skip_if_not(file.exists(here::here("config", "config.yml")), "Main config/config.yml not found")
+    cfg <- NULL
+    suppressMessages({
+        expect_no_error(cfg <- load_config()) # Use default file path
+    })
+    expect_type(cfg, "list")
+    # Add a basic check if possible, e.g., expect_true("data" %in% names(cfg))
+    expect_true(length(cfg) > 0)
 })
 
-test_that("Can manually simulate config merging (testing)", {
-    default_content <- yaml::read_yaml(fixture_path("sample_default.yml"))
-    config_content <- yaml::read_yaml(fixture_path("sample_config.yml"))
+test_that("load_config() errors correctly with non-existent path", {
+    non_existent_path <- here::here("tests", "testthat", "fixtures", "non_existent.yml")
+    relative_non_existent <- "tests/testthat/fixtures/non_existent.yml"
 
-    # Simulate 'testing' environment merge
-    # Start with default, then override/add from config$testing
-    # Use purrr::list_modify for recursive merging (or base R equivalent)
-    merged_testing <- purrr::list_modify(default_content, !!!config_content$testing)
-    # Note: list_modify only overwrites top-level. Recursive needed for nested like 'model'.
-    # A more robust manual merge:
-    merged_testing_better <- default_content
-    merged_testing_better$model <- purrr::list_modify(default_content$model, !!!config_content$testing$model)
-    merged_testing_better$paths <- purrr::list_modify(default_content$paths, !!!config_content$testing$paths)
-    merged_testing_better$report_name <- config_content$testing$report_name
+    suppressMessages({
+        expect_error(
+            load_config(file = non_existent_path),
+            "Configuration file path does not exist"
+        )
+        expect_error(
+            load_config(file = relative_non_existent),
+            "Configuration file path does not exist"
+        )
+        expect_error(
+            load_config(file = "completely_made_up_file.yml"),
+            "Configuration file path does not exist"
+        )
+    })
+})
 
+# --- Tests for get_config_value() ---
 
-    # Check the manually merged structure
-    expect_equal(merged_testing_better$data$target_variable, "TestTarget")
-    expect_equal(merged_testing_better$model$cv_folds, 2)
-    expect_equal(merged_testing_better$model$seed, 3)
-    expect_equal(merged_testing_better$paths$artifacts, "test_artifacts")
-    expect_equal(merged_testing_better$paths$logs, "test_logs")
-    expect_equal(merged_testing_better$report_name, "testing_report")
+# Load config once for these tests using the absolute path
+config_fixture <- suppressMessages(load_config(file = fixture_file))
+
+# Ensure config_fixture loaded correctly before running dependent tests
+stopifnot(!is.null(config_fixture) && length(config_fixture) > 0)
+
+test_that("get_config_value() retrieves top-level values", {
+    expect_equal(get_config_value(config_fixture, "model"), config_fixture$model)
+    expect_type(get_config_value(config_fixture, "model"), "list")
+    expect_null(get_config_value(config_fixture, "non_existent_key"))
+})
+
+test_that("get_config_value() retrieves nested values using dot notation", {
+    expect_equal(get_config_value(config_fixture, "data.filename"), "test_data.csv")
+    expect_equal(get_config_value(config_fixture, "parallel.enabled"), FALSE)
+    expect_equal(get_config_value(config_fixture, "paths.models"), "test_artifacts/models")
+    expect_null(get_config_value(config_fixture, "data.non_existent_sub_key"))
+    expect_null(get_config_value(config_fixture, "model.non_existent.deeper"))
+})
+
+test_that("get_config_value() returns default value when path not found", {
+    expect_equal(get_config_value(config_fixture, "non_existent_key", default = "default_val"), "default_val")
+    expect_equal(get_config_value(config_fixture, "data.non_existent_sub_key", default = 123), 123)
+    expect_false(get_config_value(config_fixture, "parallel.something_else", default = FALSE))
+
+    # Check that it returns actual value if it exists, not default
+    expect_equal(get_config_value(config_fixture, "model.seed", default = 999), 42)
+})
+
+test_that("get_config_value() returns default value when retrieved value is NULL", {
+    # Add a NULL value to the fixture for testing this
+    config_with_null <- config_fixture
+    config_with_null$logging$optional_setting <- NULL
+
+    expect_null(get_config_value(config_with_null, "logging.optional_setting"))
+    expect_equal(get_config_value(config_with_null, "logging.optional_setting", default = "was_null"), "was_null")
+
+    # Ensure non-null values are not replaced by default
+    expect_equal(get_config_value(config_with_null, "logging.level", default = "was_null"), "DEBUG")
 })
