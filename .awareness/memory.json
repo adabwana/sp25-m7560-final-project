@@ -1183,6 +1183,26 @@
             "entity_id": "PyTorch_Optuna_Tuning",
             "attribute": "metric_reporting",
             "value": "Switched from reporting MSE loss to RMSE for better interpretability during validation and final results display, while still optimizing based on MSE."
+        },
+        {
+            "entity_id": "RNN_Helpers_Utility",
+            "attribute": "issue_resolution",
+            "value": "Placeholder implementation of heinsen_associative_scan_log caused NaNs in MtlsModel forward pass. Resolved by replacing it with the logcumsumexp-based version from mingru.py. Further stability for extreme inputs achieved by adding nan_to_num and clamping to the output of this function."
+        },
+        {
+            "entity_id": "RNN_Helpers_Utility",
+            "attribute": "resolution_timestamp",
+            "value": "PLACEHOLDER_TIMESTAMP"
+        },
+        {
+            "entity_id": "MtlsModel_Architecture",
+            "attribute": "stability_issue",
+            "value": "Backward pass through the model can produce NaN gradients when processing extreme input values, even if the forward pass output is finite. This necessitates gradient clipping during training."
+        },
+        {
+            "entity_id": "MtlsModel_Architecture",
+            "attribute": "stability_issue_timestamp",
+            "value": "PLACEHOLDER_TIMESTAMP"
         }
     ]
 }

@@ -395,5 +395,106 @@
                 "modeling strategy"
             ]
         }
+    },
+    {
+        "id": "LESSON_PYTORCH_NAN_IN_CUSTOM_RNN_SCAN_001",
+        "type": "Lesson",
+        "name": "NaNs Caused by Unstable Custom Parallel Scan or Forward Pass",
+        "problem_pattern": {
+            "description": "Model forward pass produces NaN values immediately, especially with extreme inputs, OR training loop produces NaNs after several epochs. Issue often related to custom RNN layers (e.g., minLSTM) using shared helper functions for parallel processing (e.g., heinsen_associative_scan_log).",
+            "error_messages": [
+                "AssertionError: Output tensor contains NaNs",
+                "AssertionError: train_step returned NaN loss",
+                "AssertionError: evaluate_model returned NaN RMSE"
+            ],
+            "context": "Implementing a custom RNN (like minLSTM) using sequence lengths > 1, relying on a shared helper function (rnn_helpers.py). The helper function's scan implementation or the RNN layer's handling of large intermediate values might be unstable."
+        },
+        "solution": {
+            "steps": [
+                "Isolate the issue using TDD: Test data pipeline (preprocessing, scaling, Dataset) first.",
+                "Test the model's forward pass with clean, simple input (e.g., torch.randn). If NaNs appear -> Suspect model component.",
+                "Test the model's forward pass with extreme (but finite) inputs (e.g., +/- 1e8). If NaNs appear -> Suspect numerical stability within model/components.",
+                "Investigate custom components like parallel scans (e.g., heinsen_associative_scan_log in rnn_helpers.py). Check for correctness, stability (edge cases, large values), and compatibility.",
+                "Replace faulty/placeholder scan implementations. (e.g., Use logcumsumexp-based scan from mingru.py).",
+                "If forward pass still produces NaNs with extreme inputs, add clamping/nan_to_num *inside* the problematic component (e.g., clamp the output of log_h.exp() in the scan function).",
+                "If forward pass is stable but NaNs appear later in training -> Suspect backward pass instability (exploding gradients)."
+            ],
+            "verification": "Pytest tests for forward pass (including with extreme inputs) pass. Subsequent NaNs during training likely require gradient clipping."
+        },
+        "environment": {
+            "packages": [
+                "pytorch",
+                "pytest",
+                "numpy"
+            ],
+            "python_version": "3.11",
+            "os": "linux"
+        },
+        "metadata": {
+            "creation_date": "PLACEHOLDER_TIMESTAMP",
+            "last_updated_date": "PLACEHOLDER_TIMESTAMP_LATEST",
+            "tags": [
+                "pytorch",
+                "rnn",
+                "lstm",
+                "NaN",
+                "numerical stability",
+                "parallel scan",
+                "logcumsumexp",
+                "debugging",
+                "TDD",
+                "forward pass",
+                "clamping"
+            ]
+        }
+    },
+    {
+        "id": "LESSON_PYTORCH_NAN_GRADIENTS_BACKWARD_PASS_001",
+        "type": "Lesson",
+        "name": "NaN Gradients Produced During Backward Pass",
+        "problem_pattern": {
+            "description": "Model forward pass succeeds (even with extreme inputs), but NaNs appear in parameter gradients (`.grad`) immediately after calling `loss.backward()`.",
+            "error_messages": [
+                "AssertionError: NaNs found in gradients after backward pass"
+            ],
+            "context": "Training a model (potentially with custom layers or complex interactions) where intermediate activations during the forward pass become very large, leading to numerical overflow or invalid operations during the gradient calculation in the backward pass."
+        },
+        "solution": {
+            "steps": [
+                "Verify forward pass stability first using TDD (including checks with extreme inputs).",
+                "Add a dedicated test to check parameter gradients for NaNs immediately after `loss.backward()`:",
+                "  - Perform forward pass and loss calculation manually in the test.",
+                "  - Call `loss.backward()`.",
+                "  - Iterate through `model.parameters()` and check if `p.grad` contains NaNs using `torch.isnan(p.grad).any()`.",
+                "If NaNs are found in gradients, the primary solution is **Gradient Clipping**.",
+                "Implement gradient clipping (e.g., `torch.nn.utils.clip_grad_norm_`) in the training step *after* `loss.backward()` and *before* `optimizer.step()`.",
+                "Start with a conventional clipping value (e.g., 1.0 or 0.5) and adjust if instability persists.",
+                "Other potential (less common) causes/solutions: Lowering learning rate, using mixed-precision training carefully, checking for divisions by zero in custom backward functions (if any)."
+            ],
+            "verification": "The dedicated gradient stability test may still fail (as it checks *before* clipping), but the main `train_step` test (which includes clipping) should pass, and full training runs should become more stable."
+        },
+        "environment": {
+            "packages": [
+                "pytorch",
+                "pytest",
+                "numpy"
+            ],
+            "python_version": "3.11",
+            "os": "linux"
+        },
+        "metadata": {
+            "creation_date": "PLACEHOLDER_TIMESTAMP_LATEST",
+            "last_updated_date": "PLACEHOLDER_TIMESTAMP_LATEST",
+            "tags": [
+                "pytorch",
+                "NaN",
+                "gradients",
+                "backward pass",
+                "exploding gradients",
+                "gradient clipping",
+                "debugging",
+                "TDD"
+            ]
+        }
     }
 ]

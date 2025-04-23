@@ -26,6 +26,9 @@ class SequenceDataset(Dataset):
             raise ValueError("Features and targets must have the same number of samples.")
         if sequence_length <= 0:
             raise ValueError("sequence_length must be positive.")
+        # Add validation for sequence_length vs num_samples
+        if sequence_length > len(features):
+            raise ValueError(f"sequence_length ({sequence_length}) cannot be greater than the number of samples ({len(features)}).")
 
         self.features = features
         self.targets = targets

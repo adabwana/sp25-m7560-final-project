@@ -98,11 +98,17 @@ class MtlsModel(torch.nn.Module):
         if x.ndim != 3:
             raise ValueError(f"Expected input shape (batch_size, sequence_length, num_features), got {x.shape}")
 
+        # --- Clamp input values to prevent extreme values causing NaNs ---
+        # Define a reasonable clamp range (adjust if needed)
+        clamp_min = -1e6
+        clamp_max = 1e6
+        x_clamped = torch.clamp(x, min=clamp_min, max=clamp_max)
+        # ------------------------------------------------------------------
 
         # Project input features at each time step
         # Input to input_fc: (batch, seq, features_in)
         # Output from input_fc: (batch, seq, lstm_dim)
-        projected_x = self.activation(self.input_fc(x)) # Use chosen activation
+        projected_x = self.activation(self.input_fc(x_clamped)) 
         projected_x = self.dropout(projected_x) # Apply dropout after initial projection
 
         # Pass through the stack of layers (LSTM, Linear, Activation, Dropout, LSTM, ...)

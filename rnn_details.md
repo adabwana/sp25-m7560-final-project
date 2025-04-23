@@ -51,4 +51,19 @@ This document outlines the evolution of our RNN-based models for predicting targ
 *   The tuning ranges were iteratively refined based on the results of previous Optuna studies for each specific model/target combination.
 *   Reporting was switched from MSE to RMSE for better interpretability, while still optimizing based on the underlying MSE loss.
 
+### 5. Training Stability and Performance Considerations
+
+*   **NaNs During Training (Exploding Gradients):**
+    *   Even with a stable forward pass (verified by tests), NaN values can appear *during* training after several epochs.
+    *   This often indicates **exploding gradients**, where gradient magnitudes become excessively large due to factors like high learning rates or specific data characteristics, leading to numerical overflow (NaN/Inf).
+    *   **Solution:** A common technique is **gradient clipping**, implemented via `torch.nn.utils.clip_grad_norm_` in the `train_step` function *before* `optimizer.step()`.
+    *   A typical starting `clip_value` (the maximum allowed gradient norm) is **1.0**. This value is a common heuristic, not necessarily calculated, but serves to prevent extreme gradient values.
+    *   Clipping **stabilizes training** by rescaling large gradients while preserving their direction. It doesn't fundamentally change *what* the model learns (the loss function), only moderates the update step size during unstable moments, preventing divergence.
+
+*   **Training Time Comparison (Tabular vs. Sequential):**
+    *   Training using the **Sequential Row Processing** approach (Approach 2, using `SequenceDataset`) is expected to be **significantly slower per epoch** than the Independent Row Processing approach (Approach 1, using `TabularDataset`).
+    *   **Reason 1: RNN Computation:** In Approach 2, the RNN must perform its internal computations (unrolling gates and states) across the full `sequence_length` for each sample in the batch. In Approach 1, it only computes for a single effective time step.
+    *   **Reason 2: Backpropagation Through Time (BPTT):** Calculating gradients in Approach 2 requires backpropagating through all `sequence_length` time steps, which is computationally more expensive and memory-intensive than backpropagating through a single step in Approach 1.
+    *   The potential benefit of the longer training time is the model's ability to learn temporal dependencies, potentially leading to better performance on sequence-aware tasks.
+
 This evolution shows two distinct ways to apply RNN architectures to tabular data: either as a complex feature extractor on independent rows or as a true sequence model when temporal relationships between rows exist and are leveraged in the data preparation.
