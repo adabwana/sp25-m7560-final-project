@@ -26,7 +26,7 @@ if src_path not in sys.path:
 # --- Imports from project structure ---
 from python.utils.data_utils import load_data
 from python.utils.preprocessing import preprocess_data
-from python.datasets import TabularDataset
+from python.datasets.tabular_dataset import TabularDataset
 # Import the new model
 from python.models.mtls_architecture import MtlsModel
 from torch.utils.data import DataLoader
@@ -40,6 +40,8 @@ def train_step(model: torch.nn.Module,
                device: torch.device) -> float:
     model.train()
     features, targets = features.to(device), targets.to(device)
+    # Add sequence dimension of 1
+    features = features.unsqueeze(1) 
     predictions = model(features)
     loss = loss_fn(predictions, targets)
     optimizer.zero_grad()
@@ -57,6 +59,8 @@ def evaluate_model(model: torch.nn.Module,
     with torch.no_grad():
         for features, targets in data_loader:
             features, targets = features.to(device), targets.to(device)
+            # Add sequence dimension of 1
+            features = features.unsqueeze(1) 
             predictions = model(features)
             loss = loss_fn(predictions, targets) # Calculate MSE loss
             total_loss += loss.item()

@@ -265,5 +265,135 @@
                 "objective function"
             ]
         }
+    },
+    {
+        "id": "LESSON_PYTHON_CLASS_SCOPE_IMPORT_001",
+        "type": "Lesson",
+        "name": "Resolving NameError for Class Used in Multiple Methods",
+        "problem_pattern": {
+            "description": "A `NameError: name 'ClassName' is not defined` occurs within a class method (e.g., `forward`) when trying to use a class (`ClassName`) that was imported *only* within another method (e.g., `__init__`) of the same class.",
+            "error_messages": [
+                "NameError: name 'ClassName' is not defined"
+            ],
+            "context": "Using `isinstance(obj, ClassName)` or calling `ClassName()` within a `forward` method, where `ClassName` was imported only within the `__init__` method of the same PyTorch Module."
+        },
+        "solution": {
+            "steps": [
+                "Import the required class (`ClassName`) at the top level of the module file (e.g., outside the class definition).",
+                "Remove the redundant import statement from the specific method (e.g., `__init__`).",
+                "This makes the imported name available throughout the module scope, including all methods of the class defined within that module."
+            ],
+            "verification": "The code runs without the `NameError` when accessing the imported class name in different methods."
+        },
+        "environment": {
+            "packages": [
+                "Any"
+            ],
+            "python_version": "Any",
+            "os": "Any"
+        },
+        "metadata": {
+            "creation_date": "2025-04-23T12:25:00Z",
+            "last_updated_date": "2025-04-23T12:25:00Z",
+            "tags": [
+                "python",
+                "import",
+                "scope",
+                "NameError",
+                "class",
+                "module",
+                "pytorch"
+            ]
+        }
+    },
+    {
+        "id": "LESSON_PYTHON_TRANSITIVE_IMPORT_ERROR_001",
+        "type": "Lesson",
+        "name": "Resolving ModuleNotFoundError Due to Dependency within Imported Module",
+        "problem_pattern": {
+            "description": "A `ModuleNotFoundError: No module named 'DependencyModule'` occurs when running a script that imports ModuleA, where ModuleA itself contains an import statement for `DependencyModule` (e.g., `from DependencyModule import ...`). The error indicates Python cannot find `DependencyModule` when ModuleA tries to import it.",
+            "error_messages": [
+                "ModuleNotFoundError: No module named 'DependencyModule'"
+            ],
+            "context": "Running a main script (e.g., `training.py`) that imports `ModelArchitecture` from `models/architecture.py`. The `architecture.py` file imports `ComponentModel` from `models/component.py`. The `component.py` file imports helpers from `utils/helpers.py` (or previously from a missing `mingru.py`). The error occurs when `component.py` tries to import its dependency."
+        },
+        "solution": {
+            "steps": [
+                "Ensure the dependency module (`DependencyModule` or `helpers.py`) exists at the expected location.",
+                "Verify that the import statement within the intermediate module (ModuleA / `component.py`) correctly points to the dependency module, considering the project structure and Python's import resolution rules (absolute vs. relative imports).",
+                "Ensure the main script (`training.py`) correctly modifies `sys.path` *before* importing modules, adding the necessary root directories (e.g., the `src` directory) so that absolute imports like `from python.utils.helpers import ...` can be resolved when the intermediate module is loaded.",
+                "If the dependency was previously imported from an incorrect/missing file (e.g., `mingru.py`), refactor the intermediate module to import from the correct location (e.g., `rnn_helpers.py`) and ensure the helper file exists and is accessible via `sys.path`."
+            ],
+            "verification": "The main script runs without the `ModuleNotFoundError` related to the transitive dependency."
+        },
+        "environment": {
+            "packages": [
+                "Any"
+            ],
+            "python_version": "Any",
+            "os": "Any"
+        },
+        "metadata": {
+            "creation_date": "2025-04-23T12:20:00Z",
+            "last_updated_date": "2025-04-23T12:25:00Z",
+            "tags": [
+                "python",
+                "import",
+                "ModuleNotFoundError",
+                "dependency",
+                "sys.path",
+                "package structure"
+            ]
+        }
+    },
+    {
+        "id": "LESSON_RNN_TABULAR_MODELING_APPROACH_001",
+        "type": "Lesson",
+        "name": "Choosing RNN Modeling Approach for Tabular Data",
+        "problem_pattern": {
+            "description": "Deciding how to structure input for an RNN (GRU/LSTM) when working with tabular data.",
+            "context": "Applying RNN models to a dataset where each row represents an observation, potentially with a temporal ordering."
+        },
+        "solution": {
+            "steps": [
+                "**Approach 1: Independent Row Processing (Sequence Length = 1)**",
+                "   - Treat each row independently.",
+                "   - Reshape input in the model's `forward` method: `x = x.unsqueeze(1)` -> `(batch, 1, features)`.",
+                "   - Use case: When there's no meaningful sequence or temporal relationship between rows, or when using the RNN primarily as a complex feature transformer.",
+                "   - Implications: RNN doesn't learn inter-row dependencies. `sequence_length` is not a tunable parameter.",
+                "   - Dataset: Use a standard `TabularDataset`.",
+                "**Approach 2: Sequential Row Processing (Sequence Length > 1)**",
+                "   - Treat rows as steps in a sequence (requires data to be meaningfully sorted, e.g., chronologically).",
+                "   - Create a `SequenceDataset` that yields input sequences of shape `(sequence_length, num_features)` and the target corresponding to the last row.",
+                "   - Do *not* `unsqueeze` input in the `forward` method; expect `(batch, sequence_length, features)`.",
+                "   - Take the RNN output from the last time step (`output[:, -1, :]`) for prediction.",
+                "   - Use case: When there are temporal dependencies between rows that the model should learn.",
+                "   - Implications: RNN learns sequential patterns. `sequence_length` becomes a tunable hyperparameter."
+            ],
+            "verification": "The chosen approach aligns with the data characteristics (time-sorted or independent rows) and the modeling goal (feature transformation vs. sequence modeling). Training proceeds correctly with the corresponding Dataset and model forward pass logic."
+        },
+        "environment": {
+            "packages": [
+                "torch",
+                "pytorch"
+            ],
+            "python_version": "Any",
+            "os": "Any"
+        },
+        "metadata": {
+            "creation_date": "2025-04-23T12:35:00Z",
+            "last_updated_date": "2025-04-23T12:35:00Z",
+            "tags": [
+                "pytorch",
+                "rnn",
+                "lstm",
+                "gru",
+                "tabular data",
+                "sequence modeling",
+                "data preparation",
+                "Dataset",
+                "modeling strategy"
+            ]
+        }
     }
 ]

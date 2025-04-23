@@ -84,18 +84,24 @@ class MtlsModel(torch.nn.Module):
         """Forward pass.
 
         Args:
-            x (torch.Tensor): Input tensor of shape (batch_size, num_features).
+            x (torch.Tensor): Input tensor of shape (batch_size, sequence_length, num_features).
 
         Returns:
             torch.Tensor: Output tensor of shape (batch_size, output_dim).
         """
-        # Add sequence dimension: (batch_size, num_features) -> (batch_size, 1, num_features)
-        if x.ndim == 2:
-            x = x.unsqueeze(1)
-        elif x.ndim != 3 or x.shape[1] != 1:
-             raise ValueError(f"Expected input shape (batch_size, num_features) or (batch_size, 1, num_features), got {x.shape}")
+        # Input shape is now (batch_size, sequence_length, num_features)
+        # No longer need unsqueeze
+        # if x.ndim == 2:
+        #     x = x.unsqueeze(1)
+        # elif x.ndim != 3 or x.shape[1] != 1: # Old check is invalid
+        #      raise ValueError(f"Expected input shape (batch_size, num_features) or (batch_size, 1, num_features), got {x.shape}")
+        if x.ndim != 3:
+            raise ValueError(f"Expected input shape (batch_size, sequence_length, num_features), got {x.shape}")
 
-        # Project input features to LSTM dimension
+
+        # Project input features at each time step
+        # Input to input_fc: (batch, seq, features_in)
+        # Output from input_fc: (batch, seq, lstm_dim)
         projected_x = self.activation(self.input_fc(x)) # Use chosen activation
         projected_x = self.dropout(projected_x) # Apply dropout after initial projection
 
@@ -110,26 +116,28 @@ class MtlsModel(torch.nn.Module):
             elif isinstance(layer, nn.Linear):
                 # Reset prev_hidden before Linear projection
                 prev_hidden = None
-                # Linear expects (batch_size, features)
-                current_x = current_x.squeeze(1) # (B, 1, F) -> (B, F)
-                current_x = layer(current_x)     # (B, F) -> (B, F_new)
-                # Add sequence dim back for next LSTM layer
-                current_x = current_x.unsqueeze(1) # (B, F_new) -> (B, 1, F_new)
+                # Linear expects (..., features)
+                # Apply linear layer to each time step's output features independently
+                # current_x shape: (batch, seq, features)
+                current_x = layer(current_x)
+                # Shape after linear: (batch, seq, lstm_dim)
             else: # Activation or Dropout
-                # Reset prev_hidden if activation/dropout is applied after Linear
-                # Hidden state doesn't make sense for these stateless layers
-                # prev_hidden = None # This might be too aggressive? Let's see.
                 current_x = layer(current_x) # Apply Activation or Dropout
 
         # Output from the last layer in the ModuleList (should be a minLSTM)
         lstm_out = current_x
+        # lstm_out shape: (batch, seq_len, lstm_output_dim)
 
-        # We only need the output from the last (only) time step
-        last_step_out = lstm_out.squeeze(1)
+        # We only need the output from the last time step for prediction
+        # last_step_out shape: (batch, lstm_output_dim)
+        # last_step_out = lstm_out.squeeze(1) # Incorrect for seq_len > 1
+        last_step_out = lstm_out[:, -1, :] # Get the output of the last time step
 
         last_step_out = self.dropout(last_step_out) # Apply dropout before final layer
 
         # Pass through the final output layer
+        # Input to output_fc: (batch, lstm_output_dim)
         output = self.output_fc(last_step_out)
+        # Output shape: (batch, output_dim)
 
         return output 
