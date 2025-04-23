@@ -10,7 +10,7 @@
 
 *.csv
 !data/raw/*
-!data/predictions/old/*
+!data/predictions/*
 *.rds
 # *.json
 *.pth

@@ -11,7 +11,7 @@ suppressPackageStartupMessages(library(fs))
 
 # --- Configuration ---
 # Specify which target variable's model you want to use for predictions
-TARGET_PREDICTION <- "Occupancy" # "Duration_In_Min" Or "Occupancy"
+TARGET_PREDICTION <- "Duration_In_Min" # "Duration_In_Min" Or "Occupancy"
 
 TEST_DATA_PATH <- here::here("data", "processed", "test_engineered.csv")
 MODEL_ARTIFACT_DIR <- here::here("artifacts", "models", "r")
@@ -41,7 +41,7 @@ if (length(latest_model_files) > 0) {
   # Fallback: Look for any final model file with timestamp
   final_model_pattern <- glue::glue("{TARGET_PREDICTION}_final_.*_[0-9]+\\.rds$")
   final_model_files <- all_model_files[grepl(final_model_pattern, basename(all_model_files), perl = TRUE)]
-  
+
   if (length(final_model_files) > 0) {
     # Sort by filename (which should put the most recent timestamp last)
     final_model_files <- sort(final_model_files)
@@ -52,7 +52,7 @@ if (length(latest_model_files) > 0) {
     # Last resort: Look for validation models from run_pipeline.R
     workflow_model_pattern <- glue::glue("{TARGET_PREDICTION}_best_.*_workflow\\.rds$")
     workflow_model_files <- all_model_files[grepl(workflow_model_pattern, basename(all_model_files), perl = TRUE)]
-    
+
     if (length(workflow_model_files) > 0) {
       # Use the first available workflow model
       model_path <- workflow_model_files[1]
@@ -79,23 +79,25 @@ predictions_df <- make_predictions(best_model_object, test_data)
 if (TARGET_PREDICTION == "Occupancy") {
   cat("--- Rounding Occupancy predictions to integers (min=1) ---\n\n")
   predictions_df <- predictions_df %>%
-    mutate(.pred = round(.pred),
-           .pred = pmax(1, .pred))
+    mutate(
+      .pred = round(.pred),
+      .pred = pmax(1, .pred)
+    )
 }
 
 # 4. Format Output
-output_df <- predictions_df %>% 
-    mutate(.pred = round(.pred, digits = 4))
+output_df <- predictions_df %>%
+  mutate(.pred = round(.pred, digits = 4))
 
 # 5. Extract model type and generate filename
 # Extract model type from the loaded model filename
 model_basename <- basename(model_path)
 model_type <- stringr::str_extract(model_basename, "(?<=_final_)[^_]+(?=_)")
 if (is.na(model_type)) { # Fallback if pattern fails
-    model_type <- stringr::str_extract(model_basename, "(?<=_)[^_]+(?=_workflow\\.rds$)")
-    if (is.na(model_type)) { # Another fallback
-        model_type <- "UnknownModel"
-    }
+  model_type <- stringr::str_extract(model_basename, "(?<=_)[^_]+(?=_workflow\\.rds$)")
+  if (is.na(model_type)) { # Another fallback
+    model_type <- "UnknownModel"
+  }
 }
 
 # Generate timestamp

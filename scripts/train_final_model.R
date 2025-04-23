@@ -22,20 +22,20 @@ source(here::here("src/r/workflows/workflows.R"))
 cfg <- load_config()
 
 # --- Configuration ---
-TARGET_VARIABLE <- get_config_value(cfg, "data.target_variable")
+TARGET_VARIABLE <- get_config_value(cfg, "data.target_variable", "Occupancy")
 DATA_FILENAME <- get_config_value(cfg, "data.filename")
 FEATURES_TO_DROP <- get_config_value(cfg, "data.features_to_drop")
 MODEL_DIR <- here::here(get_config_value(cfg, "paths.models"))
 TUNING_METRIC <- get_config_value(cfg, "model.tuning_metric", "rmse")
-SEED <- get_config_value(cfg, "model.seed", 42)
+SEED <- get_config_value(cfg, "model.seed")
 
 # Add the *other* target variable to the drop list
 if (TARGET_VARIABLE == "Duration_In_Min") {
-    FEATURES_TO_DROP <- c(FEATURES_TO_DROP, "Occupancy")
+  FEATURES_TO_DROP <- c(FEATURES_TO_DROP, "Occupancy")
 } else if (TARGET_VARIABLE == "Occupancy") {
-    FEATURES_TO_DROP <- c(FEATURES_TO_DROP, "Duration_In_Min")
+  FEATURES_TO_DROP <- c(FEATURES_TO_DROP, "Duration_In_Min")
 } else {
-    warning(glue::glue("Unknown TARGET_VARIABLE: '{TARGET_VARIABLE}'. Not adding default other target to FEATURES_TO_DROP."))
+  warning(glue::glue("Unknown TARGET_VARIABLE: '{TARGET_VARIABLE}'. Not adding default other target to FEATURES_TO_DROP."))
 }
 
 # --- Set seed for reproducibility ---
@@ -48,64 +48,64 @@ set.seed(SEED)
 find_best_model_files <- function(target_var, metric = "rmse") {
   # List all model files in the models directory
   model_files <- dir_ls(MODEL_DIR, glob = "*.rds")
-  
+
   # Find files matching the target variable
   target_files <- model_files[grepl(paste0("^", target_var), basename(model_files))]
-  
-  if(length(target_files) == 0) {
+
+  if (length(target_files) == 0) {
     stop(glue::glue("No model files found for target variable '{target_var}'."))
   }
-  
+
   # Extract relevant files
   last_fit_files <- target_files[grepl("last_fit", basename(target_files))]
   params_files <- target_files[grepl("best_params", basename(target_files))]
-  
-  if(length(last_fit_files) == 0) {
+
+  if (length(last_fit_files) == 0) {
     stop(glue::glue("No last_fit files found for target variable '{target_var}'."))
   }
-  
-  if(length(params_files) == 0) {
+
+  if (length(params_files) == 0) {
     stop(glue::glue("No best_params files found for target variable '{target_var}'."))
   }
-  
+
   # Find the best model based on the metric
   # Extract metric values from filenames
   metric_values <- sapply(last_fit_files, function(f) {
     parts <- strsplit(basename(f), "_")[[1]]
     metric_idx <- which(parts == metric) + 1
-    if(metric_idx <= length(parts)) {
+    if (metric_idx <= length(parts)) {
       # Convert from string format like "2-046" to numeric 2.046
       as.numeric(gsub("-", ".", parts[metric_idx]))
     } else {
       NA
     }
   })
-  
+
   # For rmse or mae, lower is better
-  if(metric %in% c("rmse", "mae")) {
+  if (metric %in% c("rmse", "mae")) {
     best_idx <- which.min(metric_values)
   } else {
     # For rsq, higher is better
     best_idx <- which.max(metric_values)
   }
-  
-  if(length(best_idx) == 0 || is.na(best_idx)) {
+
+  if (length(best_idx) == 0 || is.na(best_idx)) {
     stop(glue::glue("Could not determine best model for '{target_var}' with metric '{metric}'."))
   }
-  
+
   best_last_fit_file <- last_fit_files[best_idx]
-  
+
   # Find the corresponding params file (should have same base name except for suffix)
   best_basename <- str_replace(basename(best_last_fit_file), "_last_fit\\.rds$", "")
   best_params_file <- params_files[grepl(best_basename, basename(params_files))]
-  
-  if(length(best_params_file) == 0) {
+
+  if (length(best_params_file) == 0) {
     stop(glue::glue("No matching params file found for last_fit file: {basename(best_last_fit_file)}"))
   }
-  
+
   # Get model type from filename
   model_type <- str_extract(basename(best_last_fit_file), "(?<=_)[^_]+(?=_last_fit\\.rds$)")
-  
+
   return(list(
     last_fit_file = best_last_fit_file,
     params_file = best_params_file[1],
@@ -149,11 +149,11 @@ cat(glue::glue("--- Creating Model Specification for {best_model_files$model_typ
 
 # Determine model list to use
 model_list_to_use <- if (TARGET_VARIABLE == "Duration_In_Min") {
-    model_list_duration
+  model_list_duration
 } else if (TARGET_VARIABLE == "Occupancy") {
-    model_list_occupancy
+  model_list_occupancy
 } else {
-    stop(glue::glue("Unknown TARGET_VARIABLE: {TARGET_VARIABLE}"))
+  stop(glue::glue("Unknown TARGET_VARIABLE: {TARGET_VARIABLE}"))
 }
 
 # Get model spec
@@ -199,4 +199,4 @@ if (file.exists(latest_model_path)) {
 file.copy(final_model_path, latest_model_path)
 cat(glue::glue("Latest model symlink created at: {latest_model_path}\n\n"))
 
-cat("=== Final Model Training Complete ===\n") 
+cat("=== Final Model Training Complete ===\n")
