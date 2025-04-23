@@ -3,7 +3,8 @@
 import torch
 import torch.nn.functional as F
 from torch.nn import Linear, Identity, Module
-from mingru import default, exists, g, log_g, heinsen_associative_scan_log
+# from mingru import default, exists, g, log_g, heinsen_associative_scan_log
+from python.utils.rnn_helpers import default, exists, g, log_g, heinsen_associative_scan_log
 
 class minLSTM(Module):
     def __init__(self, dim, expansion_factor = 1., proj_out = None):

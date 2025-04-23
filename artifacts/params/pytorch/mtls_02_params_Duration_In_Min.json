@@ -1,0 +1,9 @@
+{
+    "lr": 0.003942844919559537,
+    "dropout_rate": 0.47138066718104676,
+    "weight_decay": 0.0025597351755544877,
+    "lstm_dim": 256,
+    "num_layers": 2,
+    "batch_size": 256,
+    "lstm_expansion": 0.9438377141768306
+}
