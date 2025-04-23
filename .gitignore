@@ -12,7 +12,7 @@
 !data/raw/*
 !data/predictions/old/*
 *.rds
-*.json
+# *.json
 *.pth
 
 # Development environment

@@ -215,7 +215,7 @@ def test_gruey_model_forward(model_config, sample_preprocessed_data):
 # Import the actual function
 try:
     # Import using full path from src/python
-    from python.training.gruey import train_step
+    from training.gruey_duration import train_step
     from python.models.gruey_architecture import GrueyModel
 except ImportError as e:
     # If gruey.py isn't found or causes issues, skip tests

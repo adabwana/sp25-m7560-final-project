@@ -110,15 +110,16 @@ def objective(trial: optuna.trial.Trial,
     """Objective function for Optuna hyperparameter tuning."""
 
     # --- 1. Suggest Hyperparameters (Ordered roughly by tuning frequency) ---
-    # Refined ranges based on previous run results
-    lr = trial.suggest_float("lr", 1e-3, 5e-3, log=True) # Further narrowed range
-    dropout_rate = trial.suggest_float("dropout_rate", 0.25, 0.42) # Further refined range
-    weight_decay = trial.suggest_float("weight_decay", 1e-6, 1e-5, log=True) # Further narrowed range
-    gru_dim = trial.suggest_categorical("gru_dim", [128, 256, 512]) # Fixed to 128
-    # gru_dim = 128 # Fixed based on results
-    num_layers = trial.suggest_int("num_layers", 1, 2) # Re-enabled tuning (1 or 2)
-    batch_size = trial.suggest_categorical("batch_size", [64, 128]) # Kept [32, 64]
-    gru_expansion = trial.suggest_float("gru_expansion", 0.5, 1.4) # Slightly tightened upper bound
+    # Refined ranges based on previous run results (Occupancy target)
+    lr = trial.suggest_float("lr", 1.2e-3, 5e-3, log=True) # Slightly shifted lower bound
+    dropout_rate = trial.suggest_float("dropout_rate", 0.25, 0.42) # Kept range
+    weight_decay = trial.suggest_float("weight_decay", 1e-6, 5e-6, log=True) # Narrowed upper bound
+    # gru_dim = trial.suggest_categorical("gru_dim", [128, 256, 512]) # Fixed to 512
+    gru_dim = 512 # Fixed based on Occupancy results
+    num_layers = trial.suggest_int("num_layers", 2, 3) # Fixed to 2
+    # num_layers = 2 # Fixed based on Occupancy results
+    batch_size = trial.suggest_categorical("batch_size", [64, 128]) # Kept [64, 128]
+    gru_expansion = trial.suggest_float("gru_expansion", 0.6, 1.4) # Tightened range
     # activation_fn_name = trial.suggest_categorical("activation_fn", ["relu", "tanh", "gelu"]) # Added activation tuning
     activation_fn_name = "relu" # Fixed based on results
 
@@ -186,7 +187,7 @@ def main():
     """Main function changed to orchestrate Optuna hyperparameter tuning."""
 
     # --- Configuration (Fixed parts and defaults) ---
-    TARGET_VARIABLE = "Duration_In_Min"
+    TARGET_VARIABLE = "Occupancy"
     BASE_FEATURES_TO_DROP = [
         'Student_IDs', 'Semester', 'Class_Standing', 'Major',
         'Expected_Graduation', 'Course_Name', 'Course_Number',
