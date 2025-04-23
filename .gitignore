@@ -11,8 +11,9 @@
 *.csv
 !data/raw/*
 !data/predictions/old/*
-!*_engineered.csv
 *.rds
+*.json
+*.pth
 
 # Development environment
 *.db
