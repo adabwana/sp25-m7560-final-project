@@ -29,23 +29,18 @@ source(here::here("src/r/evaluation/evaluation.R"))
 # --- Load Configuration ---
 cfg <- load_config()
 
-# --- Inspect Loaded Config ---
-cat("\n--- Structure of Loaded Config (cfg) ---\n")
-str(cfg)
-cat("---------------------------------------\n\n")
-
 # --- Configuration ---
 # Access values directly from the merged config object
 DATA_FILENAME <- get_config_value(cfg, "data.filename")
 # Define split proportions explicitly
 INITIAL_SPLIT_PROP <- get_config_value(cfg, "data.trainval_holdout_prop") # Load from config
 # Note: TEST_SPLIT_PROP from config is now INITIAL_SPLIT_PROP. Holdout is 1 - INITIAL_SPLIT_PROP
-TARGET_VARIABLE <- cfg$data$target_variable
-CV_FOLDS <- cfg$model$cv_folds
-SEED <- cfg$model$seed
-TUNING_METRIC <- cfg$model$tuning_metric
-FEATURES_TO_DROP <- cfg$data$features_to_drop
-NUM_TOP_MODELS <- 5 # Number of top models to evaluate on holdout
+TARGET_VARIABLE <- get_config_value(cfg, "data.target_variable", "Occupancy") # Load from config
+CV_FOLDS <- get_config_value(cfg, "model.cv_folds")
+SEED <- get_config_value(cfg, "model.seed")
+TUNING_METRIC <- get_config_value(cfg, "model.tuning_metric")
+FEATURES_TO_DROP <- get_config_value(cfg, "data.features_to_drop")
+NUM_TOP_MODELS <- get_config_value(cfg, "model.num_top_models") # Number of top models to evaluate on holdout
 
 # --- Check if TARGET_VARIABLE is loaded ---
 if (is.null(TARGET_VARIABLE) || length(TARGET_VARIABLE) == 0) {
@@ -368,26 +363,17 @@ if (length(all_holdout_metrics) > 0) {
         }
         # --- End Save ---
     } else {
-        cat(glue::glue("
-Could not determine best model based on holdout set {TUNING_METRIC} (no valid holdout results found).
-"))
+        cat(glue::glue("Could not determine best model based on holdout set {TUNING_METRIC} (no valid holdout results found)."))
     }
 } else {
-    cat("
-No models completed holdout evaluation successfully to summarize results.
-")
+    cat("No models completed holdout evaluation successfully to summarize results.")
 }
 
-cat(glue::glue("
---- R Pipeline Execution Complete ---
-
-"))
+cat(glue::glue("--- R Pipeline Execution Complete ---"))
 
 # --- Stop Parallel Backend ---
 if (exists("cl") && !is.null(cl)) {
-    cat(glue::glue("--- Stopping parallel backend ---
-
-"))
+    cat(glue::glue("--- Stopping parallel backend ---"))
     stopCluster(cl)
     registerDoSEQ() # Register sequential backend
 }

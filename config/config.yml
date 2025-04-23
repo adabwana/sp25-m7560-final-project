@@ -22,7 +22,8 @@ model:
   seed: 3
   cv_folds: 5
   tuning_metric: "rmse"  # Use "accuracy" or "roc_auc" for classification
-
+  num_top_models: 5
+  
 # Parallel Processing
 parallel:
   enabled: true

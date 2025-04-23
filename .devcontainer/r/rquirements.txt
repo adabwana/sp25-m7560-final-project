@@ -32,5 +32,6 @@ xgboost
 # utils
 here
 readr
+config
 jsonlite
 doParallel

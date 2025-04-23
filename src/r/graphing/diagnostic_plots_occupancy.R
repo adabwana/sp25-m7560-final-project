@@ -1,4 +1,4 @@
-# src/r/graphing/diagnostic_plots.R
+# src/r/graphing/diagnostic_plots_occupancy.R
 
 # --- Load Libraries ---
 # Using suppressPackageStartupMessages to minimize console noise
@@ -12,10 +12,11 @@ suppressPackageStartupMessages(library(glue))
 # --- Set Global Theme for Plots ---
 ggplot2::theme_set(theme_minimal())
 
-#' Generate Standard Diagnostic Plots for Regression Models
+#' Generate Standard Diagnostic Plots for Occupancy Models
 #'
 #' Creates Predicted vs. Actual, Residuals vs. Predicted, Histogram of Residuals,
 #' and QQ Plot of Residuals based on the output of tidymodels' last_fit().
+#' For Occupancy models, predictions are rounded to integers with a minimum value of 1.
 #'
 #' @param last_fit_result The result object from tune::last_fit().
 #'                        This object contains the predictions on the holdout set.
@@ -31,12 +32,12 @@ ggplot2::theme_set(theme_minimal())
 #'
 #' @examples
 #' # Assuming 'best_fit_result' is an object saved from last_fit()
-#' # saved_plots <- generate_diagnostic_plots(best_fit_result)
+#' # saved_plots <- generate_diagnostic_plots_occupancy(best_fit_result)
 #' # print(saved_plots)
 #'
 #' # Or save directly to a file
-#' # generate_diagnostic_plots(best_fit_result, target_var_name = "YourTarget", output_dir = "artifacts/r/plots")
-generate_diagnostic_plots <- function(last_fit_result, target_var_name, output_dir = NULL, plot_filename = "diagnostic_plots.png") {
+#' # generate_diagnostic_plots_occupancy(best_fit_result, target_var_name = "Occupancy", output_dir = "artifacts/r/plots")
+generate_diagnostic_plots_occupancy <- function(last_fit_result, target_var_name, output_dir = NULL, plot_filename = "diagnostic_plots.png") {
     # --- Argument Validation ---
     if (!inherits(last_fit_result, "last_fit")) {
         stop("Input must be a 'last_fit' object produced by tune::last_fit().")
@@ -48,6 +49,49 @@ generate_diagnostic_plots <- function(last_fit_result, target_var_name, output_d
         warning(glue::glue("Output directory '{output_dir}' does not exist. Creating it."))
         dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
     }
+    
+    # --- Extract Model Name from last_fit object ---
+    cat("--- Extracting model name from last_fit result ---\n")
+    # Get the workflow from the last_fit object
+    workflow_obj <- try(last_fit_result$.workflow[[1]], silent = TRUE)
+    
+    # Default model name in case extraction fails
+    model_name <- "Unknown Model"
+    
+    if (!inherits(workflow_obj, "try-error") && !is.null(workflow_obj)) {
+        # Try to extract the model spec from the workflow
+        model_spec <- try(workflows::extract_spec_parsnip(workflow_obj), silent = TRUE)
+        
+        if (!inherits(model_spec, "try-error") && !is.null(model_spec)) {
+            # Get the model engine
+            engine <- model_spec$engine
+            
+            # Map engine names to more readable model names
+            model_name_map <- list(
+                "ranger" = "Random Forest",
+                "earth" = "MARS",
+                "xgboost" = "XGBoost",
+                "glm" = "Linear Regression",
+                "lm" = "Linear Regression",
+                "svm_poly" = "SVM",
+                "nnet" = "Neural Network"
+            )
+            
+            # Set the model name - use the mapped name if available, otherwise use the engine
+            model_name <- if (engine %in% names(model_name_map)) {
+                model_name_map[[engine]]
+            } else {
+                # Capitalize first letter of engine
+                paste0(toupper(substr(engine, 1, 1)), substr(engine, 2, nchar(engine)))
+            }
+            
+            cat(glue::glue("Identified model: {model_name}\n"))
+        } else {
+            cat("Could not extract model specification from workflow.\n")
+        }
+    } else {
+        cat("Could not extract workflow from last_fit object.\n")
+    }
 
     # --- Extract Predictions and Calculate Residuals ---
     cat("--- Extracting predictions from last_fit result ---\n")
@@ -57,22 +101,24 @@ generate_diagnostic_plots <- function(last_fit_result, target_var_name, output_d
     if (!target_var_name %in% names(predictions_df)) {
         stop(glue::glue("The specified target variable '{target_var_name}' was not found in the columns of collect_predictions(). Available columns: {paste(names(predictions_df), collapse=', ')}"))
     }
-    # Remove the guessing logic
-    # potential_truth_cols <- setdiff(names(predictions_df), c(".pred", ".row", ".config"))
-    # if (length(potential_truth_cols) != 1) {
-    #     stop("Could not reliably determine the truth column in predictions_df. Expected one column besides .pred, .row, .config.")
-    # }
-    # truth_col_name <- potential_truth_cols[1]
-    # cat(glue::glue("Identified truth column: {truth_col_name}\n"))
-
+    
     # Use the provided target_var_name
     cat(glue::glue("Using specified truth column: {target_var_name}\n"))
     truth_col_name <- target_var_name
 
+    # Apply rounding to predictions (integer values with minimum of 1)
+    cat("--- Rounding predictions to integers with minimum of 1 ---\n")
     plot_data <- predictions_df %>%
         dplyr::select(truth = !!rlang::sym(truth_col_name), predicted = .pred) %>%
-        dplyr::mutate(residuals = truth - predicted)
-
+        dplyr::mutate(
+            # First round to nearest integer
+            predicted = round(predicted),
+            # Then ensure minimum value of 1 (can't have 0 or negative occupancy)
+            predicted = pmax(1, predicted),
+            # Calculate residuals based on rounded predictions
+            residuals = truth - predicted
+        )
+    
     # --- Generate Plots ---
     cat("--- Generating diagnostic plots ---\n")
 
@@ -106,7 +152,7 @@ generate_diagnostic_plots <- function(last_fit_result, target_var_name, output_d
 
     # 3. Histogram of Residuals
     p3 <- ggplot(plot_data, aes(x = residuals)) +
-        geom_histogram(aes(y = after_stat(density)), bins = 30, fill = "lightblue", color = "black") +
+        geom_histogram(aes(y = after_stat(density)), bins = 30, fill = "steelblue", color = "black") +
         # geom_density(color = "steelblue") +
         labs(
             title = "Histogram of Residuals",
@@ -127,7 +173,7 @@ generate_diagnostic_plots <- function(last_fit_result, target_var_name, output_d
     # --- Combine Plots ---
     combined_plot <- (p1 + p2) / (p3 + p4) +
         patchwork::plot_annotation(
-            title = "Regression Model Diagnostics (Holdout Set)",
+            title = glue::glue("Occupancy Model Diagnostics ({model_name}, Holdout Set)"),
             theme = theme(plot.title = element_text(hjust = 0.5))
         )
 

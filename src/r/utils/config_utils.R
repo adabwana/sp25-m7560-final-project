@@ -56,28 +56,36 @@ load_config <- function(file = "config/config.yml") { # Default to main config f
 #' (This helper function remains useful)
 #' @param config Configuration object (list)
 #' @param path Dot-separated path to config value
-#' @param default Default value if path not found
-#' @return Configuration value
+#' @param override_value If not NULL, this value is returned directly, overriding any config value.
+#' @param default Default value to return if the path is not found in the config AND override_value is NULL.
+#' @return Configuration value or override value or default value.
 #' @export
-get_config_value <- function(config, path, default = NULL) {
-    # Split path into parts
-    parts <- strsplit(path, "\\.")[[1]]
+get_config_value <- function(config, path, override_value = NULL, default = NULL) {
+    # 1. Check if an override value is provided
+    if (!is.null(override_value)) {
+        return(override_value)
+    }
 
-    # Navigate through config
+    # 2. If no override, proceed to look up in config
+    parts <- strsplit(path, "\\.")[[1]]
     result <- config
     for (part in parts) {
         # Check if result is a list and the part exists
         if (!is.list(result) || !part %in% names(result)) {
-            # If part is not found, return the default value
+            # Path not found, return the default value
             return(default)
         }
         result <- result[[part]]
     }
 
-    # Check if the final result is NULL, and return default if specified
+    # 3. Path found, check if the result is NULL
+    # If the config explicitly has NULL for this path, and a default is specified,
+    # should we return the default or the NULL? Current logic returns default.
+    # Let's stick to that for consistency unless specified otherwise.
     if (is.null(result) && !is.null(default)) {
         return(default)
     }
 
+    # 4. Path found and value is not NULL (or it is NULL and no default was given)
     return(result)
 }
