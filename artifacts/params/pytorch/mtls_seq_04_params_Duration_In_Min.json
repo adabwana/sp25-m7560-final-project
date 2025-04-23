@@ -1,11 +1,11 @@
 {
     "lstm_dim": 256,
-    "num_layers": 2,
     "batch_size": 32,
     "activation_fn_name": "relu",
-    "lr": 0.0016107041407550878,
-    "dropout_rate": 0.3135908754400551,
-    "weight_decay": 0.0005468521608735045,
-    "lstm_expansion": 0.8814960974899794,
-    "sequence_length": 16
+    "lr": 0.003513387109307581,
+    "dropout_rate": 0.40753556756221393,
+    "weight_decay": 0.0008543072405737584,
+    "lstm_expansion": 0.9175938512263595,
+    "sequence_length": 19,
+    "num_layers": 1
 }

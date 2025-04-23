@@ -84,20 +84,24 @@ def objective(trial: optuna.trial.Trial,
     lr = trial.suggest_float("lr", 1e-3, 5e-3, log=True)
     dropout_rate = trial.suggest_float("dropout_rate", 0.25, 0.50)
     weight_decay = trial.suggest_float("weight_decay", 1e-5, 2e-3, log=True)
-    lstm_expansion = trial.suggest_float("lstm_expansion", 0.85, 0.95)
+    lstm_dim = trial.suggest_categorical("lstm_dim", [128, 256, 512])
+    # num_layers = trial.suggest_categorical("num_layers", [1, 2])
+    batch_size = trial.suggest_categorical("batch_size", [32, 64, 128])
     sequence_length = trial.suggest_int("sequence_length", 15, 30)
-    num_layers = trial.suggest_categorical("num_layers", [1, 2])
+    lstm_expansion = trial.suggest_float("lstm_expansion", 0.85, 0.95)
+
     
     # Fixed (based on previous results or decisions)
-    lstm_dim = 256
-    batch_size = 32
+    # lstm_dim = 256
+    # batch_size = 32
+    num_layers = 1
     activation_fn_name = "relu"
 
     # Store fixed parameters as user attributes
     fixed_params_for_trial = {
-        "lstm_dim": lstm_dim,
-        # "num_layers": num_layers,
-        "batch_size": batch_size,
+        # "lstm_dim": lstm_dim,
+        "num_layers": num_layers,
+        # "batch_size": batch_size,
         "activation_fn_name": activation_fn_name
     }
     trial.set_user_attr("fixed_params", fixed_params_for_trial)
