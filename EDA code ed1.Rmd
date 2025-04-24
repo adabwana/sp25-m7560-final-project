@@ -1,0 +1,544 @@
+---
+title: "EDA code ed1"
+output: html_document
+date: "2025-04-24"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Load the dataset
+df <- read.csv("/Users/naiyueliang/Desktop/BGSU Study/Statistical Learning 2/engineered data/train_engineered.csv")
+```
+
+## Check basic dataset features and a breakdown of variable types
+```{r}
+# 1. Print basic structure info
+cat("Total rows (observations):", nrow(df), "\n")
+cat("Total columns (features):", ncol(df), "\n")
+
+# 2. Check for missing values
+if (all(colSums(is.na(df)) == 0)) {
+  cat("No missing values (each column has", nrow(df), "non-null values)\n")
+} else {
+  cat("⚠️ Missing values detected in some columns\n")
+}
+
+# 3. Data type summary
+type_counts <- sapply(df, class)
+type_summary <- table(type_counts)
+
+cat("\n Data Type Breakdown:\n\n")
+for (t in names(type_summary)) {
+  count <- type_summary[[t]]
+  example_vars <- names(type_counts[type_counts == t])[1:min(3, count)]
+  cat(sprintf("- %s: %d columns, e.g., %s\n",
+              t,
+              count,
+              paste(example_vars, collapse = ", ")
+  ))
+}
+
+```
+\    
+The dataset contains 11,734 observations and 87 features, with no missing values, indicating good data quality.
+Variable types include: Character (29), Integer (24), Logical (4), Numeric (30). \        
+
+## Summary statistics and distribution of two response variables
+```{r}
+library(ggplot2)
+
+# Duration_In_Min
+ggplot(df, aes(x = Duration_In_Min)) +
+  geom_histogram(aes(y = ..density..), bins = 40, fill = "skyblue", color = "white", alpha = 0.8) +
+  geom_density(color = "darkblue", size = 1) +
+  labs(title = "Distribution of Duration_In_Min", x = "Duration (minutes)", y = "Density") +
+  theme_minimal()
+
+summary(df$Duration_In_Min)
+IQR(df$Duration_In_Min)
+
+# Occupancy
+ggplot(df, aes(x = Occupancy)) +
+  geom_histogram(aes(y = ..density..), bins = 40, fill = "salmon", color = "white", alpha = 0.8) +
+  geom_density(color = "darkred", size = 1) +
+  labs(title = "Distribution of Occupancy", x = "Occupancy Count", y = "Density") +
+  theme_minimal()
+
+summary(df$Occupancy)
+IQR(df$Occupancy)
+
+```
+\      
+1. Duration (in minutes)\   
+The distribution of Duration_In_Min is right-skewed, with most sessions lasting between 45 and 104 minutes (the interquartile range).\     
+The mean duration is about 82 minutes, but a few long sessions (up to 822 minutes) pull the mean higher than the median (68 minutes).\    
+This skew suggests the presence of outliers or occasional extended sessions.\    
+2. Occupancy (number of students)\     
+Occupancy is more symmetrically distributed, though still slightly right-skewed. The typical number of attendees ranges from 7 to 15, with a mean of ~11.6 and a median of 11. The maximum observed occupancy is 40, but most sessions are much smaller.\    
+
+## Predictors analysis Start Here
+#### Unique student ID, Course_Name and Course_Number
+```{r}
+# unique ID count
+length(unique(df$Student_IDs))
+
+# unique Course_Name count
+length(unique(df$Course_Name))
+
+# unique Course_Number count
+length(unique(df$Course_Number))
+```
+\    
+The dataset includes a total of 1,943 unique students, taking 308 distinct course names across 336 different course numbers.\    
+
+#### Predictor: Major
+```{r}
+# Major
+library(dplyr)
+library(ggplot2)
+
+# 1. Frequency table
+table(df$Major) %>% sort(decreasing = TRUE) %>% head(10)
+
+# 2. Bar plot of top 10 categories
+df %>%
+  count(Major) %>%
+  top_n(10, n) %>%
+  ggplot(aes(x = reorder(Major, n), y = n)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  coord_flip() +
+  labs(title = "Top 10 Majors by Frequency", x = "Major", y = "Count") +
+  theme_minimal()
+
+# 3. Mean Duration by category
+df %>%
+  group_by(Major) %>%
+  summarise(mean_duration = mean(Duration_In_Min, na.rm = TRUE),
+            n = n()) %>%
+  filter(n > 30) %>%
+  top_n(10, mean_duration) %>%
+  ggplot(aes(x = reorder(Major, mean_duration), y = mean_duration)) +
+  geom_col(fill = "salmon") +
+  coord_flip() +
+  labs(title = "Top 10 Majors by Mean Duration", x = "Major", y = "Avg. Duration (min)") +
+  theme_minimal()
+
+# 3. Mean Occupancy by category
+df %>%
+  group_by(Major) %>%
+  summarise(mean_duration = mean(Occupancy, na.rm = TRUE),
+            n = n()) %>%
+  filter(n > 30) %>%
+  top_n(10, mean_duration) %>%
+  ggplot(aes(x = reorder(Major, mean_duration), y = mean_duration)) +
+  geom_col(fill = "salmon") +
+  coord_flip() +
+  labs(title = "Top 10 Majors by Mean Occupancy", x = "Major", y = "Avg. Occupancy") +
+  theme_minimal()
+```
+\    
+Among all students, over 5,000 entries have "No Response" for major.
+The most common reported majors include Marketing, Early Childhood Education, and Accounting.
+Majors like Sport Management and Supply Chain Management have the longest average session durations, while Accounting and Information Systems show higher average occupancy, indicating possibly larger class sizes.\     
+
+#### Predictor: Class_Standing, Course_Code_by_Thousands, Semester
+```{r}
+library(dplyr)
+library(ggplot2)
+
+# All the categorical predictors
+cat_vars <- c("Class_Standing", "Course_Code_by_Thousands", "Semester")
+
+# loop
+for (var in cat_vars) {
+  cat("\n📊 Variable:", var, "\n")
+  print(table(df[[var]]) %>% sort(decreasing = TRUE))
+
+  # frequency
+  p1 <- df %>%
+    count(!!sym(var)) %>%
+    ggplot(aes(x = reorder(!!sym(var), n), y = n)) +
+    geom_col(fill = "skyblue") +
+    coord_flip() +
+    labs(title = paste("Frequency of", var), x = var, y = "Count") +
+    theme_minimal()
+
+  print(p1)
+
+  # Avg Duration in groups
+  p2 <- df %>%
+    group_by(!!sym(var)) %>%
+    summarise(avg_duration = mean(Duration_In_Min, na.rm = TRUE),
+              n = n()) %>%
+    filter(n > 30) %>%
+    ggplot(aes(x = reorder(!!sym(var), avg_duration), y = avg_duration)) +
+    geom_col(fill = "salmon") +
+    coord_flip() +
+    labs(title = paste("Avg. Duration by", var),
+         x = var, y = "Avg. Duration (min)") +
+    theme_minimal()
+
+  print(p2)
+  
+  #Occupancy
+    # Avg Occupancy in groups
+  p3 <- df %>%
+    group_by(!!sym(var)) %>%
+    summarise(avg_duration = mean(Occupancy, na.rm = TRUE),
+              n = n()) %>%
+    filter(n > 30) %>%
+    ggplot(aes(x = reorder(!!sym(var), avg_duration), y = avg_duration)) +
+    geom_col(fill = "salmon") +
+    coord_flip() +
+    labs(title = paste("Avg. Occupancy by", var),
+         x = var, y = "Avg. Occupancy") +
+    theme_minimal()
+
+  print(p3)
+  
+}
+```
+\     
+Seniors represent the largest group in the dataset, followed by Juniors and Graduates. Interestingly, Juniors have the longest average session durations, while Sophomores have the highest average occupancy.\    
+
+Course codes in the 1000s and 2000s are the most frequent, but courses in the 4000s tend to have the longest durations.
+In terms of semesters, Fall 2016 had more sessions than Spring 2017, and also showed slightly higher average durations and occupancy.\    
+
+#### predictor: Course_Name
+```{r}
+# Course_Name
+
+library(dplyr)
+library(ggplot2)
+
+# 1. Frequency table
+table(df$Course_Name) %>% sort(decreasing = TRUE) %>% head(10)
+
+# 2. Bar plot of top 10 categories
+df %>%
+  count(Course_Name) %>%
+  top_n(10, n) %>%
+  ggplot(aes(x = reorder(Course_Name, n), y = n)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  coord_flip() +
+  labs(title = "Top 10 Course_Name by Frequency", x = "Course_Name", y = "Count") +
+  theme_minimal()
+
+# 3. Mean Duration by category
+df %>%
+  group_by(Course_Name) %>%
+  summarise(mean_duration = mean(Duration_In_Min, na.rm = TRUE),
+            n = n()) %>%
+  filter(n > 30) %>%   
+  top_n(10, mean_duration) %>%
+  ggplot(aes(x = reorder(Course_Name, mean_duration), y = mean_duration)) +
+  geom_col(fill = "salmon") +
+  coord_flip() +
+  labs(title = "Top 10 Course_Name by Mean Duration", x = "Course_Name", y = "Avg. Duration (min)") +
+  theme_minimal()
+
+# Occupancy
+# 3. Mean Occupancy by category
+df %>%
+  group_by(Course_Name) %>%
+  summarise(mean_duration = mean(Occupancy, na.rm = TRUE),
+            n = n()) %>%
+  filter(n > 30) %>%   
+  top_n(10, mean_duration) %>%
+  ggplot(aes(x = reorder(Course_Name, mean_duration), y = mean_duration)) +
+  geom_col(fill = "salmon") +
+  coord_flip() +
+  labs(title = "Top 10 Course_Name by Mean Occupancy", x = "Course_Name", y = "Avg. Occupancy") +
+  theme_minimal()
+```
+\    
+Basic Calculus is by far the most frequently taken course, followed by Introduction to Statistics and Calculus and Analytic Geometry.
+Courses such as Business Finance and College Algebra I have the longest average durations, while Organic Chemistry and Accounting-related courses tend to have the highest average occupancy.
+\     
+
+#### Predictor: Course_Type
+```{r}
+# Course_Type
+
+library(dplyr)
+library(ggplot2)
+
+# 1. Frequency table
+table(df$Course_Type) %>% sort(decreasing = TRUE) %>% head(10)
+
+# 2. Bar plot of top 10 categories
+df %>%
+  count(Course_Type) %>%
+  top_n(10, n) %>%
+  ggplot(aes(x = reorder(Course_Type, n), y = n)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  coord_flip() +
+  labs(title = "Top 10 Course_Type by Frequency", x = "Course_Type", y = "Count") +
+  theme_minimal()
+
+# 3. Mean Duration by category
+df %>%
+  group_by(Course_Type) %>%
+  summarise(mean_duration = mean(Duration_In_Min, na.rm = TRUE),
+            n = n()) %>%
+  filter(n > 30) %>%
+  top_n(10, mean_duration) %>%
+  ggplot(aes(x = reorder(Course_Type, mean_duration), y = mean_duration)) +
+  geom_col(fill = "salmon") +
+  coord_flip() +
+  labs(title = "Top 10 Course_Type by Mean Duration", x = "Course_Type", y = "Avg. Duration (min)") +
+  theme_minimal()
+
+
+#Occupancy
+# 3. Mean Duration by category
+df %>%
+  group_by(Course_Type) %>%
+  summarise(mean_duration = mean(Occupancy, na.rm = TRUE),
+            n = n()) %>%
+  filter(n > 30) %>%
+  top_n(10, mean_duration) %>%
+  ggplot(aes(x = reorder(Course_Type, mean_duration), y = mean_duration)) +
+  geom_col(fill = "salmon") +
+  coord_flip() +
+  labs(title = "Top 10 Course_Type by Mean Occupancy", x = "Course_Type", y = "Avg. Occupancy") +
+  theme_minimal()
+```
+\    
+Math (MATH) is the most frequent course type by far, followed by Statistics (STAT) and Chemistry (CHEM).
+Courses under Finance (FIN) and Operations Research (OR) have the longest average durations, while German (GERM) and Accounting (ACCT) course types show the highest average occupancy, indicating larger class sizes in those areas.\     
+\     
+
+#### Predictor: Check_In_Time, Check_Out_Time, Check_In_Date
+```{r}
+# Check_In_Hour
+# Check_Out_Hour
+# Check_In_Date
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+
+# 1. convert time
+df <- df %>%
+  mutate(Check_In_Time = hms::as_hms(Check_In_Time),
+         Check_Out_Time = hms::as_hms(Check_Out_Time),
+         Check_In_Hour = hour(Check_In_Time),
+         Check_Out_Hour = hour(Check_Out_Time),
+         Check_In_Date = as.Date(Check_In_Date))
+
+# 2. histogram Check_In_Hour
+ggplot(df, aes(x = Check_In_Hour)) +
+  geom_histogram(binwidth = 1, fill = "skyblue", color = "white") +
+  labs(title = "Distribution of Check-In Time by Hour",
+       x = "Hour of Day", y = "Count") +
+  theme_minimal()
+
+# 3. histogram：Check_Out_Hour
+ggplot(df, aes(x = Check_Out_Hour)) +
+  geom_histogram(binwidth = 1, fill = "salmon", color = "white") +
+  labs(title = "Distribution of Check-Out Time by Hour",
+       x = "Hour of Day", y = "Count") +
+  theme_minimal()
+
+# 4. Check-In over calendar date
+df %>%
+  group_by(Check_In_Date) %>%
+  summarise(visits = n()) %>%
+  ggplot(aes(x = Check_In_Date, y = visits)) +
+  geom_line(color = "steelblue") +
+  labs(title = "Check-Ins over Time", x = "Date", y = "Count") +
+  theme_minimal()
+```
+
+```{r}
+library(ggplot2)
+
+# Define predictors and response variables
+predictors <- c("Check_In_Time", "Check_Out_Time", "Check_In_Date")
+responses <- c("Duration_In_Min", "Occupancy")
+
+# Create scatter plots
+for (x in predictors) {
+  for (y in responses) {
+    p <- ggplot(df, aes_string(x = x, y = y)) +
+      geom_point(alpha = 0.4, color = "steelblue") +
+      labs(title = paste("Scatter Plot of", y, "vs", x),
+           x = x, y = y) +
+      theme_minimal()
+    print(p)
+  }
+}
+
+```
+\    
+Check-In/Out Time Distributions: Most check-ins occur between 10 AM and 4 PM, peaking around 3 PM, while check-outs are more spread out, extending later into the evening (around 5–9 PM).\    
+Daily Check-Ins: There's a clear weekly pattern with dips on weekends and a large gap during winter break.\    
+Scatter Plots:\    
+Duration vs. Check-In Time: Duration tends to decrease as check-in time gets later, likely due to closing time constraints.\    
+Occupancy vs. Check-In Time: Occupancy increases until the afternoon, then gradually declines, aligning with peak usage hours.\    
+Duration vs. Check-Out Time: Later check-outs are generally associated with longer durations.\   
+Occupancy vs. Check-Out Time: Occupancy peaks around mid-to-late afternoon, consistent with peak facility use.\    
+Duration/Occupancy vs. Check-In Date: Patterns reflect semester cycles, with activity ramping up during academic periods and dropping off during breaks.\      
+\   
+
+## check the relationship between Total_Credit_Hours_Earned and responses (Duration_In_Min and Occupancy) 
+```{r}
+
+library(ggplot2)
+library(dplyr)
+
+# countinuous predictors
+cont_vars <- c("Total_Credit_Hours_Earned")
+
+# plots
+for (var in cont_vars) {
+  
+  cat("\n📊 Now analyzing:", var, "\n")
+  
+  # 1. histogram
+  p1 <- ggplot(df, aes_string(x = var)) +
+    geom_histogram(aes(y = ..density..), bins = 40, fill = "skyblue", color = "white", alpha = 0.7) +
+    geom_density(color = "darkblue", size = 1) +
+    labs(title = paste("Histogram + Density of", var), x = var, y = "Density") +
+    theme_minimal()
+  print(p1)
+  
+  # 2. boxplot
+  p2 <- ggplot(df, aes_string(y = var)) +
+    geom_boxplot(fill = "salmon") +
+    labs(title = paste("Boxplot of", var), y = var) +
+    theme_minimal()
+  print(p2)
+  
+  # 3. pridictor vs Duration_In_Min
+  if (var != "Duration_In_Min") {
+    p3 <- ggplot(df, aes_string(x = var, y = "Duration_In_Min")) +
+      geom_point(alpha = 0.4, color = "steelblue") +
+      geom_smooth(method = "loess", color = "red", se = FALSE) +
+      labs(title = paste(var, "vs. Duration_In_Min"), x = var, y = "Duration (Min)") +
+      theme_minimal()
+    print(p3)
+  }
+  
+    # 4. pridictor vs Occupancy
+  if (var != "Occupancy") {
+    p3 <- ggplot(df, aes_string(x = var, y = "Occupancy")) +
+      geom_point(alpha = 0.4, color = "steelblue") +
+      geom_smooth(method = "loess", color = "red", se = FALSE) +
+      labs(title = paste(var, "vs. Occupancy"), x = var, y = "Occupancy") +
+      theme_minimal()
+    print(p3)
+  }
+}
+
+```
+\        
+The variable Total_Credit_Hours_Earned is right-skewed, with a peak around 130–135 credit hours. The boxplot reveals some lower and upper outliers. Its relationship with both Duration_In_Min and Occupancy appears weak but slightly increasing, especially at higher credit hour levels. The loess trend lines suggest that students with more credit hours may stay a bit longer and have slightly higher occupancy rates, but the effect is minimal. \     
+\          
+## check the relationship between Duration_In_Min and Occupancy
+```{r}
+
+library(ggplot2)
+library(dplyr)
+
+# countinuous predictors
+cont_vars <- c( "Duration_In_Min", "Occupancy")
+
+# plots
+for (var in cont_vars) {
+  
+  cat("\n📊 Now analyzing:", var, "\n")
+  
+  # 3. pridictor vs Duration_In_Min
+  if (var != "Duration_In_Min") {
+    p3 <- ggplot(df, aes_string(x = var, y = "Duration_In_Min")) +
+      geom_point(alpha = 0.4, color = "steelblue") +
+      geom_smooth(method = "loess", color = "red", se = FALSE) +
+      labs(title = paste(var, "vs. Duration_In_Min"), x = var, y = "Duration (Min)") +
+      theme_minimal()
+    print(p3)
+  }
+  
+    # 4. pridictor vs Occupancy
+  if (var != "Occupancy") {
+    p3 <- ggplot(df, aes_string(x = var, y = "Occupancy")) +
+      geom_point(alpha = 0.4, color = "steelblue") +
+      geom_smooth(method = "loess", color = "red", se = FALSE) +
+      labs(title = paste(var, "vs. Occupancy"), x = var, y = "Occupancy") +
+      theme_minimal()
+    print(p3)
+  }
+}
+
+```
+\    
+The scatter plots show that Duration_In_Min and Occupancy have a weak nonlinear relationship.\    
+
+As Duration_In_Min increases, Occupancy initially stays flat, then slightly declines.\   
+Conversely, higher Occupancy is associated with slightly longer durations on average, especially beyond 25 occupants.
+Overall, the correlation is minimal but suggests that longer durations tend to happen with smaller groups, and larger groups may not stay as long. \     
+\         
+
+## Course_Code_by_Thousands plots
+```{r}
+# convert to factor
+df$Course_Code_by_Thousands <- as.factor(df$Course_Code_by_Thousands)
+
+# Boxplot vs. Duration
+ggplot(df, aes(x = Course_Code_by_Thousands, y = Duration_In_Min)) +
+  geom_boxplot(fill = "skyblue") +
+  labs(title = "Duration by Course Code Group", x = "Course Code (Grouped)", y = "Duration (Min)") +
+  theme_minimal()
+
+# Boxplot vs. Occupancy 
+ggplot(df, aes(x = Course_Code_by_Thousands, y = Occupancy)) +
+  geom_boxplot(fill = "salmon") +
+  labs(title = "Occupancy by Course Code Group", x = "Course Code (Grouped)", y = "Occupancy") +
+  theme_minimal()
+
+```
+\        
+Courses in the 1000–4000 code groups tend to have longer durations and higher occupancy, with more extreme values and variability. In contrast, courses in the 5000–7000 range show shorter durations and lower, more consistent occupancy levels. This suggests lower-level courses are more intensive and widely attended than upper-level ones. \        
+\         
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
