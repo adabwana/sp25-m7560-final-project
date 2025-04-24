@@ -295,117 +295,116 @@
 
 \section{Model Building}
 
-\begin{frame}
-\frametitle{Model Hyperparameter Tuning Ranges}
-    \vspace{-1em} % Reduce space below title
-    \begin{columns}[T] % Align columns at the top
-        \hspace*{-1.5em}
-        \column{0.5\textwidth}
-        \centering % Center content in the column
-        \textbf{Duration Task Models} \vspace{0.5em} \\ % Title for first table
-        \small % Use smaller font for tables
-        \begin{tabular}{>{\columncolor{bgsubrown!20}}m{0.3\textwidth} >{\arraybackslash}m{0.65\textwidth}}
-        \toprule
-        \textbf{Model} & \textbf{Hyperparameters} \\
-        \midrule
-        MARS & \textbf{num\_terms}: \([7, 15]\) \newline \textbf{prod\_degree}: 1 \\
-        % \addlinespace[0.5em]
-        \midrule
-        Random Forest & \textbf{trees}: \([300, 325]\) \newline \textbf{min\_n}: \([15, 25]\) \newline \textbf{mtry}: \([20, 25]\) \\
-        % \addlinespace[0.5em]
-        \midrule
-        XGBoost & \textbf{trees}: \([75, 100]\) \newline \textbf{tree\_depth}: \([15, 21]\) \newline \textbf{learn\_rate}: 0.05 \newline \textbf{min\_n}: \([10, 15]\) \newline \textbf{mtry}: \([12, 15]\) \\
-        \bottomrule
-        \end{tabular}
+% \begin{frame}
+% \frametitle{Model Hyperparameter Tuning Ranges}
+%     \vspace{-1em} % Reduce space below title
+%     \begin{columns}[T] % Align columns at the top
+%         \hspace*{-1.5em}
+%         \column{0.5\textwidth}
+%         \centering % Center content in the column
+%         \textbf{Duration Task Models} \vspace{0.5em} \\ % Title for first table
+%         \small % Use smaller font for tables
+%         \begin{tabular}{>{\columncolor{bgsubrown!20}}m{0.3\textwidth} >{\arraybackslash}m{0.65\textwidth}}
+%         \toprule
+%         \textbf{Model} & \textbf{Hyperparameters} \\
+%         \midrule
+%         MARS & \textbf{num\_terms}: \([7, 15]\) \newline \textbf{prod\_degree}: 1 \\
+%         % \addlinespace[0.5em]
+%         \midrule
+%         Random Forest & \textbf{trees}: \([300, 325]\) \newline \textbf{min\_n}: \([15, 25]\) \newline \textbf{mtry}: \([20, 25]\) \\
+%         % \addlinespace[0.5em]
+%         \midrule
+%         XGBoost & \textbf{trees}: \([75, 100]\) \newline \textbf{tree\_depth}: \([15, 21]\) \newline \textbf{learn\_rate}: 0.05 \newline \textbf{min\_n}: \([10, 15]\) \newline \textbf{mtry}: \([12, 15]\) \\
+%         \bottomrule
+%         \end{tabular}
         
-        \column{0.5\textwidth}
-        \centering % Center content in the column
-        \textbf{Occupancy Task Models} \vspace{0.5em} \\ % Title for second table
-        \small % Use smaller font for tables
-        \begin{tabular}{>{\columncolor{bgsubrown!20}}m{0.3\textwidth} >{\arraybackslash}m{0.65\textwidth}}
-        \toprule
-        \textbf{Model} & \textbf{Hyperparameters} \\
-        \midrule
-        MARS & \textbf{num\_terms}: \([120, 130]\) \newline \textbf{prod\_degree}: 1 \\
-        % \addlinespace[0.5em]
-        \midrule
-        Random Forest & \textbf{trees}: \([250, 350]\) \newline \textbf{min\_n}: \([2, 3]\) \newline \textbf{mtry}: \([40, 45]\) \\
-        % \addlinespace[0.5em]
-        \midrule
-        XGBoost & \textbf{trees}: \([350, 450]\) \newline \textbf{tree\_depth}: \([6, 8]\) \newline \textbf{learn\_rate}: 0.1 \newline \textbf{min\_n}: \([2, 3]\) \newline \textbf{mtry}: \([30, 35]\) \\
-        \bottomrule
-        \end{tabular}
-    \end{columns}
+%         \column{0.5\textwidth}
+%         \centering % Center content in the column
+%         \textbf{Occupancy Task Models} \vspace{0.5em} \\ % Title for second table
+%         \small % Use smaller font for tables
+%         \begin{tabular}{>{\columncolor{bgsubrown!20}}m{0.3\textwidth} >{\arraybackslash}m{0.65\textwidth}}
+%         \toprule
+%         \textbf{Model} & \textbf{Hyperparameters} \\
+%         \midrule
+%         MARS & \textbf{num\_terms}: \([120, 130]\) \newline \textbf{prod\_degree}: 1 \\
+%         % \addlinespace[0.5em]
+%         \midrule
+%         Random Forest & \textbf{trees}: \([250, 350]\) \newline \textbf{min\_n}: \([2, 3]\) \newline \textbf{mtry}: \([40, 45]\) \\
+%         % \addlinespace[0.5em]
+%         \midrule
+%         XGBoost & \textbf{trees}: \([350, 450]\) \newline \textbf{tree\_depth}: \([6, 8]\) \newline \textbf{learn\_rate}: 0.1 \newline \textbf{min\_n}: \([2, 3]\) \newline \textbf{mtry}: \([30, 35]\) \\
+%         \bottomrule
+%         \end{tabular}
+%     \end{columns}
 
-    % \begin{alertblock}{Implementation Details}
-    %     \vspace{-0.3cm}
-    %     \small
-    %     \begin{columns}
-    %         \column{0.55\textwidth}
-    %         \begin{itemize}
-    %             \setlength{\itemsep}{0pt}
-    %             \item \textbf{Duration}: Log-normal
-    %             \item \textbf{Occupancy}: Poisson \& Weibull
-    %             \item Integer rounding for occupancy
-    %         \end{itemize}
+% \end{frame}
 
-    %         \column{0.45\textwidth}
-    %         \begin{itemize}
-    %             \setlength{\itemsep}{0pt}
-    %             \item Grid search optimization
-    %             \item Feature selection
-    %             \item Cross-validation
-    %         \end{itemize}            
-    %     \end{columns}
-    % \end{alertblock}
-    
-\end{frame}
+% \begin{frame}
+% \frametitle{Deep Learning Hyperparameters}
+%     \vspace{-1em} % Reduce space below title
+%     \begin{columns}[T] % Align columns at the top
+%         \hspace*{-1.5em}
+%         \column{0.5\textwidth}
+%         \centering % Center content in the column
+%         \textbf{Duration Task Models} \vspace{0.5em} \\ % Title for first table
+%         \footnotesize  % Use smaller font for tables
+%         \begin{tabular}{>{\columncolor{bgsubrown!20}}m{0.15\textwidth} >{\arraybackslash}m{0.8\textwidth}}
+%         \toprule
+%         \textbf{Model} & \textbf{Hyperparameters} \\
+%         \midrule
+%         GRU & \textbf{lr}: \([10^{-3}, 5 \times 10^{-3}]\) \newline \textbf{batch\_size}: \(\{64, 128\}\) \newline \textbf{gru\_dim}: \(\{128, 256, 512\}\) \newline \textbf{num\_layers}: \(\{1, 2\}\) \newline \textbf{gru\_expansion}: \([0.5, 1.4]\) \newline \textbf{dropout\_rate}: \([0.25, 0.42]\) \newline \textbf{weight\_decay}: \([10^{-6}, 10^{-5}]\) \newline \textbf{activation\_fn}: relu \\
+%         % \addlinespace[0.5em]
+%         \midrule
+%         Trans-former & \textbf{lr}: \([10^{-3}, 7 \times 10^{-3}]\) \newline \textbf{batch\_size}: 64 \newline \textbf{d\_model}: 128 \newline \textbf{nhead}: \(\{4, 8\}\) \newline \textbf{nlayers}: \(\{2, 3\}\) \newline \textbf{d\_hid}: 128 \newline \textbf{dropout}: \([0.05, 0.20]\) \newline \textbf{weight\_decay}: \([10^{-6}, 10^{-4}]\) \\
+%         \bottomrule
+%         \end{tabular}
+        
+%         \column{0.5\textwidth}
+%         \centering % Center content in the column
+%         \textbf{Occupancy Task Models} \vspace{0.5em} \\ % Title for second table
+%         \footnotesize  % Use smaller font for tables
+%         \begin{tabular}{>{\columncolor{bgsubrown!20}}m{0.15\textwidth} >{\arraybackslash}m{0.8\textwidth}}
+%         \toprule
+%         \textbf{Model} & \textbf{Hyperparameters} \\
+%         \midrule
+%         GRU & \textbf{lr}: \([1.2 \times 10^{-3}, 5 \times 10^{-3}]\) \newline \textbf{batch\_size}: \(\{64, 128\}\) \newline \textbf{gru\_dim}: 512 \newline \textbf{num\_layers}: 2 \newline \textbf{gru\_expansion}: \([0.6, 1.4]\) \newline \textbf{dropout\_rate}: \([0.25, 0.42]\) \newline \textbf{weight\_decay}: \([10^{-6}, 5 \times 10^{-6}]\) \newline \textbf{activation\_fn}: relu \\
+%         % \addlinespace[0.5em]
+%         \midrule
+%         Trans-former & \textbf{lr}: \([8 \times 10^{-4}, 1.5 \times 10^{-3}]\) \newline \textbf{batch\_size}: \(\{64, 128\}\) \newline \textbf{d\_model}: \(\{64, 128, 256\}\) \newline \textbf{nhead}: \(\{4, 8\}\) \newline \textbf{nlayers}: \(\{2, 3\}\) \newline \textbf{d\_hid}: 128 \newline \textbf{dropout}: \([0.05, 0.20]\) \newline \textbf{weight\_decay}: \([10^{-6}, 10^{-5}]\) \\
+%         \bottomrule
+%         \end{tabular}
+%     \end{columns}
+% \end{frame}
 
 \begin{frame}
-\frametitle{Deep Learning Hyperparameters}
-    \vspace{-1em} % Reduce space below title
-    \begin{columns}[T] % Align columns at the top
-        \hspace*{-1.5em}
-        \column{0.5\textwidth}
-        \centering % Center content in the column
-        \textbf{Duration Task Models} \vspace{0.5em} \\ % Title for first table
-        \footnotesize  % Use smaller font for tables
-        \begin{tabular}{>{\columncolor{bgsubrown!20}}m{0.15\textwidth} >{\arraybackslash}m{0.8\textwidth}}
-        \toprule
-        \textbf{Model} & \textbf{Hyperparameters} \\
-        \midrule
-        GRU & \textbf{lr}: \([10^{-3}, 5 \times 10^{-3}]\) \newline \textbf{batch\_size}: \(\{64, 128\}\) \newline \textbf{gru\_dim}: \(\{128, 256, 512\}\) \newline \textbf{num\_layers}: \(\{1, 2\}\) \newline \textbf{gru\_expansion}: \([0.5, 1.4]\) \newline \textbf{dropout\_rate}: \([0.25, 0.42]\) \newline \textbf{weight\_decay}: \([10^{-6}, 10^{-5}]\) \newline \textbf{activation\_fn}: relu \\
-        % \addlinespace[0.5em]
-        \midrule
-        Trans-former & \textbf{lr}: \([10^{-3}, 7 \times 10^{-3}]\) \newline \textbf{batch\_size}: 64 \newline \textbf{d\_model}: 128 \newline \textbf{nhead}: \(\{4, 8\}\) \newline \textbf{nlayers}: \(\{2, 3\}\) \newline \textbf{d\_hid}: 128 \newline \textbf{dropout}: \([0.05, 0.20]\) \newline \textbf{weight\_decay}: \([10^{-6}, 10^{-4}]\) \\
-        \bottomrule
-        \end{tabular}
-        
-        \column{0.5\textwidth}
-        \centering % Center content in the column
-        \textbf{Occupancy Task Models} \vspace{0.5em} \\ % Title for second table
-        \footnotesize  % Use smaller font for tables
-        \begin{tabular}{>{\columncolor{bgsubrown!20}}m{0.15\textwidth} >{\arraybackslash}m{0.8\textwidth}}
-        \toprule
-        \textbf{Model} & \textbf{Hyperparameters} \\
-        \midrule
-        GRU & \textbf{lr}: \([1.2 \times 10^{-3}, 5 \times 10^{-3}]\) \newline \textbf{batch\_size}: \(\{64, 128\}\) \newline \textbf{gru\_dim}: 512 \newline \textbf{num\_layers}: 2 \newline \textbf{gru\_expansion}: \([0.6, 1.4]\) \newline \textbf{dropout\_rate}: \([0.25, 0.42]\) \newline \textbf{weight\_decay}: \([10^{-6}, 5 \times 10^{-6}]\) \newline \textbf{activation\_fn}: relu \\
-        % \addlinespace[0.5em]
-        \midrule
-        Trans-former & \textbf{lr}: \([8 \times 10^{-4}, 1.5 \times 10^{-3}]\) \newline \textbf{batch\_size}: \(\{64, 128\}\) \newline \textbf{d\_model}: \(\{64, 128, 256\}\) \newline \textbf{nhead}: \(\{4, 8\}\) \newline \textbf{nlayers}: \(\{2, 3\}\) \newline \textbf{d\_hid}: 128 \newline \textbf{dropout}: \([0.05, 0.20]\) \newline \textbf{weight\_decay}: \([10^{-6}, 10^{-5}]\) \\
-        \bottomrule
-        \end{tabular}
-
-    \end{columns}
+\frametitle{Hyperparameters Tuned (Both Tasks)}
+    \vspace{-0.5em} % Reduce space below title
+    \centering % Center the table
+    % \footnotesize % Use smaller font
+    \begin{tabular}{>{\columncolor{bgsubrown!20}}m{0.2\textwidth} >{\arraybackslash}m{0.75\textwidth}}
+    \toprule
+    \textbf{Model} & \textbf{Hyperparameters Tuned} \\
+    \midrule
+    MARS & Number of terms, Product degree \\
+    \midrule
+    Random Forest & Number of trees, Minimum node size, Number of variables tried \\
+    \midrule
+    XGBoost & Number of trees, Tree depth, Learning rate, Minimum node size, Number of variables tried \\
+    \midrule
+    GRU & Learning rate, Batch size, Hidden dimension, Number of layers, Expansion factor, Dropout rate, Weight decay, Activation function \\
+    \midrule
+    Transformer & Learning rate, Batch size, Model dimension, Number of heads, Number of layers, Hidden dimension, Dropout rate, Weight decay \\
+    \bottomrule
+    \end{tabular}
 \end{frame}
 
 \begin{frame}
 \frametitle{Preprocessing Pipeline Details}
     % Removed KFold text, using columns layout
-    \begin{columns}[T] % Use columns for layout
-        \column{0.6\textwidth} % Column for Recipe steps
+    % \begin{columns}[T] % Use columns for layout
+        % \column{0.6\textwidth} % Column for Recipe steps
         \begin{block}{R `recipes` Pipeline Steps}
-        \small % Smaller font for the list
+        % \small % Smaller font for the list
         \begin{enumerate}
             \item Define roles (outcome, predictors)
             \item Remove specified ID/date/unwanted columns
@@ -418,18 +417,18 @@
         \end{enumerate}
         \end{block}
         
-        \column{0.4\textwidth} % Column for Explanation
-        \begin{alertblock}{Step 5: Handling Novel Factor Levels}
-        \footnotesize % Use footnotesize for the detailed explanation
-        Prepares for unseen categories in new data:
-            \begin{itemize}
-                \item Adds a special "novel" level to factors.
-                \item Replaces unknown categories with "novel" instead of causing errors.
-                \item Ensures robust predictions, especially before dummy encoding.
-            \end{itemize}
-        \end{alertblock}
+    %     \column{0.4\textwidth} % Column for Explanation
+    %     \begin{alertblock}{Step 5: Handling Novel Factor Levels}
+    %     \footnotesize % Use footnotesize for the detailed explanation
+    %     Prepares for unseen categories in new data:
+    %         \begin{itemize}
+    %             \item Adds a special "novel" level to factors.
+    %             \item Replaces unknown categories with "novel" instead of causing errors.
+    %             \item Ensures robust predictions, especially before dummy encoding.
+    %         \end{itemize}
+    %     \end{alertblock}
 
-    \end{columns}
+    % \end{columns}
 \end{frame}
 
 \section{Evaluation}
@@ -482,14 +481,7 @@
     \vspace{1em} % Add space before alert block
     \begin{alertblock}{Key Performance Observations}
         \small % Use smaller font for alert block
-        Based on holdout set metrics:
-        \begin{itemize}
-            \setlength{\itemsep}{0pt}
-            \setlength{\parsep}{0pt}
-            \setlength{\topsep}{0pt}
-            \item \textbf{Duration Task:} XGBoost achieved the lowest RMSE (59.9) and highest R² (0.099).
-            \item \textbf{Occupancy Task:} XGBoost also performed best, with the lowest RMSE (1.83) and highest R² (0.911).
-        \end{itemize}
+        Based on holdout set metrics, XGBoost performed best for both tasks.
     \end{alertblock}
 \end{frame}
 
@@ -505,16 +497,21 @@
             \toprule
             \textbf{Component} & \textbf{Value} \\
             \midrule
-            Model & PenalizedSplines \\
-            Pipeline & vanilla \\
-            CV Method & kfold \\
-            RMSE & 59.47 \\
-            R² & 0.059 \\
+            Model & XGBoost \\
+            % Pipeline & vanilla \ % Removed as requested
+            CV Method & 5-fold \\
+            RMSE & 59.9 \\ % From previous 'Top Model Performance' slide
+            R² & 0.099 \\ % From previous 'Top Model Performance' slide
             \midrule
-            Ridge $\alpha$ & 14.38 \\
-            Spline degree & 3 \\
-            Spline knots & 15 \\
-            Scaler & RobustScaler \\
+            Trees & 75 \\
+            Tree Depth & 21 \\
+            Learning Rate & 0.05 \\
+            Min Node Size & 15 \\
+            Variables Tried (mtry) & 15 \\
+            % Ridge $\alpha$ & 14.38 \ % Removed old params
+            % Spline degree & 3 \ % Removed old params
+            % Spline knots & 15 \ % Removed old params
+            % Scaler & RobustScaler \ % Removed old params
             \bottomrule
             \end{tabular}
             \end{center}
@@ -528,23 +525,25 @@
             \toprule
             \textbf{Component} & \textbf{Value} \\
             \midrule
-            Model & PenalizedSplines \\
-            Pipeline & vanilla \\
-            CV Method & rolling \\
-            RMSE & 3.64 \\
-            R² & 0.303 \\
+            Model & XGBoost \\
+            % Pipeline & vanilla \ % Removed as requested
+            CV Method & 5-fold \\
+            RMSE & 1.83 \\ % From previous 'Top Model Performance' slide
+            R² & 0.911 \\ % From previous 'Top Model Performance' slide
             \midrule
-            Ridge $\alpha$ & 29.76 \\
-            Spline degree & 3 \\
-            Spline knots & 15 \\
-            Scaler & RobustScaler \\
+            Trees & 450 \\
+            Tree Depth & 8 \\
+            Learning Rate & 0.1 \\
+            Min Node Size & 2 \\
+            Variables Tried (mtry) & 35 \\
             \bottomrule
             \end{tabular}
             \end{center}
         \end{columns}
-    
+        
+        \footnotesize
         \begin{alertblock}{Key Insight}
-            Both tasks achieved best results with PenalizedSplines and vanilla features, though with different CV methods \& regularization.
+            XGBoost provided the best performance for both tasks using 5-fold cross-validation. Final performance was boosted by using a \textbf{weighted average} of predictions (weight = 0.75) and training set duration means (weight = 0.25).
         \end{alertblock}
     \end{frame}
     
@@ -553,10 +552,10 @@
     \begin{center}
         \noindent\centering
         \vspace{-0.7cm}
-        % \includegraphics[width=1.0\textwidth, height=0.95\textheight,
-        %     % keepaspectratio,    % Maintains aspect ratio
-        %     interpolate=false,  % Prevents blurry interpolation
-        %     draft=false]{images/evaluation/Duration_PenalizedSplines_vanilla_kfold.jpg}
+        \includegraphics[width=1.0\textwidth, height=0.95\textheight,
+            % keepaspectratio,    % Maintains aspect ratio
+            interpolate=false,  % Prevents blurry interpolation
+            draft=false]{images/eval/holdout_diagnostics_duration.png}
     \end{center}
 \end{frame}
 
@@ -565,24 +564,33 @@
     \begin{center}
         \noindent\centering
         \vspace{-0.7cm}
-        % \includegraphics[width=1.0\textwidth, height=0.95\textheight,
-        %     % keepaspectratio,    % Maintains aspect ratio
-        %     interpolate=false,  % Prevents blurry interpolation
-        %     draft=false]{images/evaluation/Occupancy_PenalizedSplines_vanilla_rolling.jpg}
+        \includegraphics[width=1.0\textwidth, height=0.95\textheight,
+            % keepaspectratio,    % Maintains aspect ratio
+            interpolate=false,  % Prevents blurry interpolation
+            draft=false]{images/eval/holdout_diagnostics_occupancy.png}
     \end{center}
 \end{frame}
 
 \begin{frame}
 \frametitle{Sanity Check}
-    \vspace{-0.35cm}
+    \vspace{-1em}
     \begin{center}
-        % Top image
-        % \includegraphics[width=1.0\textwidth, height=0.49\textheight]{images/evaluation/distribution_comparisons.jpg}
+        % Top images side-by-side
+        \begin{columns}[T] % Align columns at the top
+            \column{0.5\textwidth}
+            \hspace*{-1em}
+            \centering
+            \includegraphics[width=\textwidth, height=0.53\textheight]{images/eval/duration_distribution.png}
+            \column{0.5\textwidth}
+            \hspace*{-1em}
+            \centering
+            \includegraphics[width=\textwidth, height=0.53\textheight]{images/eval/occupancy_distribution.png}
+        \end{columns}
         
-        \vspace{0.1cm} % Add some vertical spacing between images
+        \vspace{-0.5em} % Add some vertical spacing between image groups
         
         % Bottom image
-        % \includegraphics[width=1.0\textwidth, height=0.45\textheight]{images/evaluation/occupancy_comparison_histogram.jpg}
+        \includegraphics[width=0.8\textwidth, height=0.45\textheight]{images/eval/imputed_vs_direct_occupancy.png}
 
     \end{center}
 \end{frame}
@@ -591,27 +599,19 @@
 
 \begin{frame}
 \frametitle{Key Findings}
-    \begin{columns}
-        \column{0.55\textwidth}
-        \textbf{Main Results}:
-            \begin{itemize}
-                \item \textbf{PenalizedSplines} with \textit{vanilla} features performed best
-                \item \textbf{Occupancy} prediction shows promise (R² = 0.303)
-                \item \textbf{Duration} prediction remains challenging (R² = 0.059)
-            \end{itemize}
+    \begin{block}{Main Results}
+        \begin{enumerate}
+            \item \textbf{XGBoost} achieved the best performance for both tasks. Weighting further boosted performance.
+            \item \textbf{Occupancy} prediction was highly successful on our training data(Holdout R² = 0.91).
+            \item \textbf{Duration} prediction improved with a weighted average approach, but remains challenging (Holdout R² = 0.10).
+            \item \textbf{K-means++} initialization did not show a clear advantage over standard K-means for the sample dataset presented.
+            % \item \textbf{Weighted average} (75% prediction, 25% mean) boosted Duration performance.
+        \end{enumerate}
+    \end{block}
                             
-        \column{0.5\textwidth}
-        \textbf{Future Directions}:
-            \begin{itemize}
-            \item Incorporate \textit{weather} data
-            \item Explore \textit{non-linear} relationships further
-            \item Investigate \textit{time series} approaches
-            \end{itemize}
-    \end{columns}
-
-    \vspace{0.5cm}
+    % \vspace{0.5cm}
     \begin{alertblock}{Impact}
-        While duration prediction remains difficult, our occupancy model shows strong potential for a victory \textbf{\#CautiousOptimism}
+        The Occupancy model demonstrates strong predictive power. Duration prediction, while improved, highlights the difficulty of modeling individual student behavior.
     \end{alertblock}
 \end{frame}
 
