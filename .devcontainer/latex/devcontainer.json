@@ -15,6 +15,12 @@
         "tomoki1207.pdf"
       ],
       "settings": {
+        "[latex]": {
+          "editor.defaultFormatter": "James-Yu.latex-workshop",
+          "editor.formatOnSave": true
+      },
+
+        "latex-workshop.latex.formatter": "latexindent",
         "latex-workshop.latex.autoBuild.run": "onSave",
         "latex-workshop.latex.autoClean.run": "onBuilt",
         "latex-workshop.view.pdf.viewer": "tab",

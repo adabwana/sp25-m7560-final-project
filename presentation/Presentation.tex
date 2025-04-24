@@ -29,9 +29,9 @@
 
 % Start of slides
 \title{Predicting Learning Commons Usage:\\Duration and Occupancy}
-\subtitle{A Statistical Learning Approach}
-\author{Emma Naiyue Liang, Ryan Renken, Jaryt Salvo, \& Jason Turk}
-\institute{MATH 7550 Statistical Learning \textbar\textbar \space BGSU}
+\subtitle{A Non-Linear Approach}
+\author{Naiyue Liang (Emma), Ryan Renken, Jaryt Salvo, \& Jason Turk}
+\institute{MATH 7560 Statistical Learning II \textbar\textbar \space BGSU}
 \date{\today}
 
 \begin{document}
@@ -40,7 +40,66 @@
 \titlepage
 \end{frame}
 
-\section{Response Distributions}
+
+\section{Kmeans++}
+
+\begin{frame}
+\frametitle{K-means: Data \& Motivation}
+    % \textbf{Data}: Points sampled from a small subset of \(\mathbb{R}^2\).
+
+    % \vspace{0.5em} % Small space before alert block
+    \begin{alertblock}{Clustering Task}
+        \small % Keep text size small inside block
+        \begin{itemize}
+            \item \textbf{Goal}: Partition \(\mathbb{R}^2\) data into \(k=11\) clusters.
+            \item \textbf{Comparison}: Standard K-means vs K-means++ initialization.
+            \item \textbf{K-means++ Motivation}: Better initial centroids for potentially faster/better clustering.
+        \end{itemize}
+    \end{alertblock}
+
+    \vspace{0.5em} % Add vertical space before the image
+    \begin{center}
+        \includegraphics[width=0.8\textwidth]{images/kmeans/kmeanscloud.png}
+    \end{center}
+\end{frame}
+
+\begin{frame}
+\frametitle{K-means vs K-means++ Results}
+    \vspace{1em}
+    \begin{columns}[T] % Align columns at the top
+        \column{0.4\textwidth}
+        \small % Use smaller font for text
+        \textbf{Standard K-means}:
+            \begin{itemize}
+            \item \textbf{Stats}: 5 iterations, WCSS = 22,824.
+            \end{itemize}
+
+        \vspace{1em} % Add more vertical space between the two stat blocks
+
+        \textbf{K-means++ Initialization}:
+        \vspace{-1em}
+            \begin{itemize}
+            \item \textbf{Stats}: 8 iterations, WCSS = 22,943.
+            \end{itemize}
+        
+        \begin{alertblock}{Observation}
+            K-means++ offered no clear advantage over standard K-means for this dataset (visually or by WCSS).
+        \end{alertblock}
+    
+
+        \column{0.65\textwidth}
+        \centering % Center the images
+        \vspace{-2em}
+        \includegraphics[width=\textwidth, height=0.55\textheight]{images/kmeans/kmeans.png} \\
+        \vspace{-1em} % Space between images
+        \includegraphics[width=\textwidth, height=0.55\textheight]{images/kmeans/kmeanspp.png}
+    \end{columns}
+    
+\end{frame}
+
+
+
+\section{Learning Commons Data}
 
 % \begin{frame}
 % \frametitle{Data Overview}
@@ -132,7 +191,7 @@
 \end{frame}
 
 
-\section{Feature Engineering}
+% \section{Feature Engineering}
 
 \begin{frame}
 \frametitle{Feature Categories Overview}
@@ -153,24 +212,20 @@
     Student & Major groups, Class standing, Academic progress \\
     \bottomrule
     \end{tabular}
-    \end{center}
 
-    \begin{alertblock}{Engineering Approach}
-        \vspace{-0.3cm}
-        \begin{columns}
-            \column{0.48\textwidth}
-            \begin{itemize}
-            \item Temporal patterns
-            \item Academic context
-            \end{itemize}
-            
-            \column{0.48\textwidth}
-            \begin{itemize}
-            \item Student behavior
-            \item Group dynamics
-            \end{itemize}
-        \end{columns}
-    \end{alertblock}
+    \vspace{1em} % Add space between tables
+
+    \hspace*{-1em} % Shift this table slightly left
+    \begin{tabular}{>{\columncolor{bgsubrown!20}}m{0.3\textwidth} >{\arraybackslash}m{0.7\textwidth}}
+    \toprule
+    \textbf{External Source} & \textbf{Key Features} \\
+    \midrule
+    R library `lunar` & Moon phase data \\
+    \midrule
+    R library `openmeteo` & Hourly weather metrics (temperature, humidity, pressure, cloud cover, wind, radiation, precipitation, \& soil conditions) \\
+    \bottomrule
+    \end{tabular}
+    \end{center}
 \end{frame}    
 
 \begin{frame}
@@ -207,83 +262,99 @@
     \end{alertblock}
 \end{frame}
 
-\begin{frame}
-\frametitle{Complete Feature List (\url{~}50 Pre-Dummied)}
-    % \begin{center}
-    \noindent
-    \hspace{-1cm}
-    \footnotesize
-    \begin{tabular}{>{\columncolor{bgsubrown!20}}m{0.16\textwidth} >{\arraybackslash}m{0.93\textwidth}}
-    \toprule
-    \textbf{Category} & \textbf{Features} \\
-    \midrule
-    Student Demographics & \textbf{Student\_IDs}, Gender, \textbf{Class\_Standing}, Class\_Standing\_Self\_Reported, Class\_Standing\_BGSU, Has\_Multiple\_Majors, \textbf{Major}, Major\_Category, Degree\_Type \\
-    \midrule
-    Academic Performance & \textbf{Total\_Credit\_Hours\_Earned}, Term\_Credit\_Hours, Credit\_Load\_Category, Term\_GPA, Cumulative\_GPA, Change\_in\_GPA, GPA\_Category, GPA\_Trend \\
-    \midrule
-    Course Information & \textbf{Course\_Name}, \textbf{Course\_Number}, \textbf{Course\_Type}, Course\_Type\_Category, Course\_Level, \textbf{Course\_Code\_by\_Thousands}, Course\_Name\_Category, Course\_Level\_Mix, Advanced\_Course\_Ratio, Unique\_Courses \\
-    \midrule
-    Temporal Features & \textbf{Check\_In\_Time}, \textbf{Check\_Out\_Time}, \textbf{Check\_In\_Date}, Check\_In\_Hour, Check\_In\_Day, Check\_In\_Month, \textbf{Semester}, Semester\_Week, Check\_In\_Week, Is\_Weekend, Time\_Category \\
-    \midrule
-    Visit Metrics & \underline{\textbf{Duration\_In\_Min}}, Group\_Size, Group\_Size\_Category, Group\_Check\_In, Total\_Visits, Semester\_Visits, Week\_Volume, Avg\_Weekly\_Visits, \underline{\textbf{Occupancy}} \\
-    \midrule
-    Graduation & \textbf{Expected\_Graduation}, Expected\_Graduation\_Date, Months\_Until\_Graduation \\
-    \bottomrule
-    \end{tabular}
-    % \end{center}
+% \begin{frame}
+% \frametitle{Complete Feature List (\url{~}50 Pre-Dummied)}
+%     % \begin{center}
+%     \noindent
+%     \hspace{-1cm}
+%     \footnotesize
+%     \begin{tabular}{>{\columncolor{bgsubrown!20}}m{0.16\textwidth} >{\arraybackslash}m{0.93\textwidth}}
+%     \toprule
+%     \textbf{Category} & \textbf{Features} \\
+%     \midrule
+%     Student Demographics & \textbf{Student\_IDs}, Gender, \textbf{Class\_Standing}, Class\_Standing\_Self\_Reported, Class\_Standing\_BGSU, Has\_Multiple\_Majors, \textbf{Major}, Major\_Category, Degree\_Type \\
+%     \midrule
+%     Academic Performance & \textbf{Total\_Credit\_Hours\_Earned}, Term\_Credit\_Hours, Credit\_Load\_Category, Term\_GPA, Cumulative\_GPA, Change\_in\_GPA, GPA\_Category, GPA\_Trend \\
+%     \midrule
+%     Course Information & \textbf{Course\_Name}, \textbf{Course\_Number}, \textbf{Course\_Type}, Course\_Type\_Category, Course\_Level, \textbf{Course\_Code\_by\_Thousands}, Course\_Name\_Category, Course\_Level\_Mix, Advanced\_Course\_Ratio, Unique\_Courses \\
+%     \midrule
+%     Temporal Features & \textbf{Check\_In\_Time}, \textbf{Check\_Out\_Time}, \textbf{Check\_In\_Date}, Check\_In\_Hour, Check\_In\_Day, Check\_In\_Month, \textbf{Semester}, Semester\_Week, Check\_In\_Week, Is\_Weekend, Time\_Category \\
+%     \midrule
+%     Visit Metrics & \underline{\textbf{Duration\_In\_Min}}, Group\_Size, Group\_Size\_Category, Group\_Check\_In, Total\_Visits, Semester\_Visits, Week\_Volume, Avg\_Weekly\_Visits, \underline{\textbf{Occupancy}} \\
+%     \midrule
+%     Graduation & \textbf{Expected\_Graduation}, Expected\_Graduation\_Date, Months\_Until\_Graduation \\
+%     \bottomrule
+%     \end{tabular}
+%     % \end{center}
 
-    \begin{alertblock}{Feature Set}
-        Total of 48 features used for model training, organized into logical categories.
-    \end{alertblock}
-\end{frame}
-
-
+%     \begin{alertblock}{Feature Set}
+%         Total of 48 features used for model training, organized into logical categories.
+%     \end{alertblock}
+% \end{frame}
 
 
 \section{Model Building}
 
 \begin{frame}
-\frametitle{Common Models for Both Tasks}
-    \begin{center}
-        \begin{tabular}{>{\columncolor{bgsubrown!20}}l l}
+\frametitle{Model Hyperparameter Tuning Ranges}
+    \vspace{-1em} % Reduce space below title
+    \begin{columns}[T] % Align columns at the top
+        \hspace*{-1.5em}
+        \column{0.5\textwidth}
+        \centering % Center content in the column
+        \textbf{Duration Task Models} \vspace{0.5em} \\ % Title for first table
+        \small % Use smaller font for tables
+        \begin{tabular}{>{\columncolor{bgsubrown!20}}m{0.3\textwidth} >{\arraybackslash}m{0.65\textwidth}}
         \toprule
         \textbf{Model} & \textbf{Hyperparameters} \\
         \midrule
-        Ridge & $\alpha \in [10^0, 10^2]$ \\
+        MARS & \textbf{num\_terms}: \([7, 15]\) \newline \textbf{prod\_degree}: 1 \\
         \addlinespace[0.5em]
-        Lasso & $\alpha \in [10^{-2}, 10^0]$ \\
+        Random Forest & \textbf{trees}: \([300, 325]\) \newline \textbf{min\_n}: \([15, 25]\) \newline \textbf{mtry}: \([20, 25]\) \\
         \addlinespace[0.5em]
-        Penalized-Splines & \textbf{knots}: $\{9, 11, 13, 15\}$, \\
-        & \textbf{degree}: 3, \\
-        & \textbf{ridge}: $\alpha \in [10^0, 10^2]$ \\
-        \addlinespace[0.5em]
-        KNN & \textbf{neighbors}: $\{15, 17, 19, 21\}$, \\
-        & \textbf{weights}: $\{$uniform, distance$\}$ \\
+        XGBoost & \textbf{trees}: \([75, 100]\) \newline \textbf{tree\_depth}: \([15, 21]\) \newline \textbf{learn\_rate}: 0.05 \newline \textbf{min\_n}: \([10, 15]\) \newline \textbf{mtry}: \([12, 15]\) \\
         \bottomrule
         \end{tabular}
-    \end{center}
+        
+        \column{0.5\textwidth}
+        \centering % Center content in the column
+        \textbf{Occupancy Task Models} \vspace{0.5em} \\ % Title for second table
+        \small % Use smaller font for tables
+        \begin{tabular}{>{\columncolor{bgsubrown!20}}m{0.3\textwidth} >{\arraybackslash}m{0.65\textwidth}}
+        \toprule
+        \textbf{Model} & \textbf{Hyperparameters} \\
+        \midrule
+        MARS & \textbf{num\_terms}: \([120, 130]\) \newline \textbf{prod\_degree}: 1 \\
+        \addlinespace[0.5em]
+        Random Forest & \textbf{trees}: \([250, 350]\) \newline \textbf{min\_n}: \([2, 3]\) \newline \textbf{mtry}: \([40, 45]\) \\
+        \addlinespace[0.5em]
+        XGBoost & \textbf{trees}: \([350, 450]\) \newline \textbf{tree\_depth}: \([6, 8]\) \newline \textbf{learn\_rate}: 0.1 \newline \textbf{min\_n}: \([2, 3]\) \newline \textbf{mtry}: \([30, 35]\) \\
+        \bottomrule
+        \end{tabular}
+    \end{columns}
 
-    \begin{alertblock}{Implementation Details}
-        \vspace{-0.3cm}
-        \small
-        \begin{columns}
-            \column{0.55\textwidth}
-            \begin{itemize}
-                \setlength{\itemsep}{0pt}
-                \item \textbf{Duration}: Log-normal
-                \item \textbf{Occupancy}: Poisson \& Weibull
-                \item Integer rounding for occupancy
-            \end{itemize}
+    % \begin{alertblock}{Implementation Details}
+    %     \vspace{-0.3cm}
+    %     \small
+    %     \begin{columns}
+    %         \column{0.55\textwidth}
+    %         \begin{itemize}
+    %             \setlength{\itemsep}{0pt}
+    %             \item \textbf{Duration}: Log-normal
+    %             \item \textbf{Occupancy}: Poisson \& Weibull
+    %             \item Integer rounding for occupancy
+    %         \end{itemize}
 
-            \column{0.45\textwidth}
-            \begin{itemize}
-                \setlength{\itemsep}{0pt}
-                \item Grid search optimization
-                \item Feature selection
-                \item Cross-validation
-            \end{itemize}            
-        \end{columns}
-    \end{alertblock}
+    %         \column{0.45\textwidth}
+    %         \begin{itemize}
+    %             \setlength{\itemsep}{0pt}
+    %             \item Grid search optimization
+    %             \item Feature selection
+    %             \item Cross-validation
+    %         \end{itemize}            
+    %     \end{columns}
+    % \end{alertblock}
+    
 \end{frame}
 
 % \begin{frame}
@@ -583,10 +654,10 @@
     \begin{center}
         \noindent\centering
         \vspace{-0.7cm}
-        \includegraphics[width=1.0\textwidth, height=0.95\textheight,
-            % keepaspectratio,    % Maintains aspect ratio
-            interpolate=false,  % Prevents blurry interpolation
-            draft=false]{images/evaluation/Duration_PenalizedSplines_vanilla_kfold.jpg}
+        % \includegraphics[width=1.0\textwidth, height=0.95\textheight,
+        %     % keepaspectratio,    % Maintains aspect ratio
+        %     interpolate=false,  % Prevents blurry interpolation
+        %     draft=false]{images/evaluation/Duration_PenalizedSplines_vanilla_kfold.jpg}
     \end{center}
 \end{frame}
 
@@ -650,10 +721,10 @@
     \begin{center}
         \noindent\centering
         \vspace{-0.7cm}
-        \includegraphics[width=1.0\textwidth, height=0.95\textheight,
-            % keepaspectratio,    % Maintains aspect ratio
-            interpolate=false,  % Prevents blurry interpolation
-            draft=false]{images/evaluation/Occupancy_PenalizedSplines_vanilla_rolling.jpg}
+        % \includegraphics[width=1.0\textwidth, height=0.95\textheight,
+        %     % keepaspectratio,    % Maintains aspect ratio
+        %     interpolate=false,  % Prevents blurry interpolation
+        %     draft=false]{images/evaluation/Occupancy_PenalizedSplines_vanilla_rolling.jpg}
     \end{center}
 \end{frame}
 
@@ -662,12 +733,12 @@
     \vspace{-0.35cm}
     \begin{center}
         % Top image
-        \includegraphics[width=1.0\textwidth, height=0.49\textheight]{images/evaluation/distribution_comparisons.jpg}
+        % \includegraphics[width=1.0\textwidth, height=0.49\textheight]{images/evaluation/distribution_comparisons.jpg}
         
         \vspace{0.1cm} % Add some vertical spacing between images
         
         % Bottom image
-        \includegraphics[width=1.0\textwidth, height=0.45\textheight]{images/evaluation/occupancy_comparison_histogram.jpg}
+        % \includegraphics[width=1.0\textwidth, height=0.45\textheight]{images/evaluation/occupancy_comparison_histogram.jpg}
 
     \end{center}
 \end{frame}
