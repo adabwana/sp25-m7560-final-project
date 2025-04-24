@@ -1,0 +1,15 @@
+# Fixture: sample_config.yml
+default:
+  inherits: sample_default.yml
+  # Some value defined only here
+  report_name: "default_report"
+
+testing:
+  inherits: sample_default.yml
+  # Override a default value
+  model:
+    cv_folds: 2
+  # Add a new value
+  paths:
+    logs: "test_logs"
+  report_name: "testing_report" 

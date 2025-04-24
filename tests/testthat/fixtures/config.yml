@@ -1,0 +1,26 @@
+# Test configuration file (tests/testthat/fixtures/config.yml)
+data:
+  filename: "test_data.csv"
+  train_val_prop: 0.8
+  target_variable: "TestTarget"
+  features_to_drop:
+    - "ID"
+    - "Date"
+
+model:
+  seed: 42
+  cv_folds: 3
+  tuning_metric: "mae"
+
+parallel:
+  enabled: false
+  num_cores: 1
+
+paths:
+  artifacts: "test_artifacts/params"
+  models: "test_artifacts/models"
+  data: "test_data_dir"
+
+logging:
+  level: "DEBUG"
+  file: "test_logs/test_pipeline.log" 

@@ -25,34 +25,38 @@ mars_grid <- grid_regular( # Levels define how many points for each param
 
 
 # --- Random Forest ---
-rf_spec <- rand_forest(mode = "regression", trees = tune(), min_n = tune()) %>%
+rf_spec <- rand_forest(mode = "regression", trees = tune(), min_n = tune(), mtry = tune()) %>%
   set_engine("ranger")
 
 rf_params <- parameters(
   trees(range = c(100L, 200L)),
-  min_n(range = c(2L, 5L))
+  min_n(range = c(2L, 10L)),
+  mtry(range = c(5L, 20L))
 )
 
 # Generate grid using dials::grid_regular
 rf_grid <- grid_regular(
   rf_params,
-  levels = c(trees = 2, min_n = 2) # Creates 2*2=4 combinations
+  levels = c(trees = 2, min_n = 3, mtry = 3) # Creates 2*3*3=18 combinations
 )
 
 # --- XGBoost ---
-xgb_spec <- boost_tree(mode = "regression", trees = tune(), tree_depth = tune(), learn_rate = tune()) %>%
+xgb_spec <- boost_tree(mode = "regression", trees = tune(), tree_depth = tune(), learn_rate = tune(), 
+                       min_n = tune(), mtry = tune()) %>%
   set_engine("xgboost")
 
 xgb_params <- parameters(
-  trees(range = c(100L, 200L)),
-  tree_depth(range = c(3L, 9L)),
-  learn_rate(range = log10(c(0.01, 0.1))) # dials uses log10 scale for learn_rate
+  trees(range = c(100L, 300L)),
+  tree_depth(range = c(3L, 6L)),
+  learn_rate(range = log10(c(0.1, 0.1))), # dials uses log10 scale for learn_rate
+  min_n(range = c(2L, 10L)),
+  mtry(range = c(5L, 20L))
 )
 
 # Generate grid using dials::grid_regular
 xgb_grid <- grid_regular(
   xgb_params,
-  levels = c(trees = 2, tree_depth = 3, learn_rate = 2) # Creates 2*3*2=12 combinations
+  levels = c(trees = 3, tree_depth = 2, learn_rate = 1, min_n = 3, mtry = 3) # Creates 3*2*1*3*3 = 54 combinations
 )
 
 # Store definitions

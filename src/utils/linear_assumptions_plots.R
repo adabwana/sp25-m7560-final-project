@@ -2,6 +2,11 @@ library(broom)
 library(ggplot2)
 library(dplyr)
 
+.fitted <- hfit3
+.resid <- hfit3 - holdout$Duration_In_Min
+.std_resid <- scale(.resid)
+df <- data.frame(.fitted, .resid, std_resid)
+
 # Set ggplot2 theme
 theme_set(theme_minimal())
 
