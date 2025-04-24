@@ -1,9 +1,0 @@
-{
-    "lr": 0.0013592863400752049,
-    "dropout_rate": 0.40019568418697166,
-    "weight_decay": 1.3573313404030501e-06,
-    "gru_dim": 512,
-    "num_layers": 1,
-    "batch_size": 64,
-    "gru_expansion": 1.2320127478912108
-}

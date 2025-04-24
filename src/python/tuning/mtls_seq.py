@@ -12,6 +12,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 import optuna
 import json
+import torch.nn.utils as utils # Import utils for clipping
 
 # Add project root for imports from other modules like utils
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
@@ -26,7 +27,9 @@ if src_path not in sys.path:
 # --- Imports from project structure ---
 from python.utils.data_utils import load_data
 from python.utils.preprocessing import preprocess_data
-from python.datasets.tabular_dataset import TabularDataset
+# from python.datasets import TabularDataset
+# Import the new dataset correctly
+from python.datasets.sequence_dataset import SequenceDataset
 # Import the new model
 from python.models.mtls_architecture import MtlsModel
 from torch.utils.data import DataLoader
@@ -37,15 +40,17 @@ def train_step(model: torch.nn.Module,
                targets: torch.Tensor,
                loss_fn: torch.nn.modules.loss._Loss,
                optimizer: torch.optim.Optimizer,
-               device: torch.device) -> float:
+               device: torch.device,
+               clip_value: float = 1.0) -> float: # Add clip_value parameter
     model.train()
     features, targets = features.to(device), targets.to(device)
-    # Add sequence dimension of 1
-    features = features.unsqueeze(1) 
     predictions = model(features)
     loss = loss_fn(predictions, targets)
     optimizer.zero_grad()
     loss.backward()
+    # --- Add Gradient Clipping ---
+    utils.clip_grad_norm_(model.parameters(), clip_value)
+    # ---------------------------
     optimizer.step()
     return loss.item()
 
@@ -59,8 +64,6 @@ def evaluate_model(model: torch.nn.Module,
     with torch.no_grad():
         for features, targets in data_loader:
             features, targets = features.to(device), targets.to(device)
-            # Add sequence dimension of 1
-            features = features.unsqueeze(1) 
             predictions = model(features)
             loss = loss_fn(predictions, targets) # Calculate MSE loss
             total_loss += loss.item()
@@ -76,54 +79,78 @@ def objective(trial: optuna.trial.Trial,
             device: torch.device) -> float:
     """Objective function for Optuna hyperparameter tuning for MtlsModel."""
 
-    # --- 1. Suggest Hyperparameters (Refined ranges based on previous Duration run) ---
-    lr = trial.suggest_float("lr", 1e-3, 5e-3, log=True) # Kept range
-    dropout_rate = trial.suggest_float("dropout_rate", 0.25, 0.50) # Adjusted range
-    weight_decay = trial.suggest_float("weight_decay", 1e-5, 8e-3, log=True) # Adjusted range
-    lstm_dim = trial.suggest_categorical("lstm_dim", [64, 128, 256]) # Focused range
-    num_layers = trial.suggest_int("num_layers", 2, 3) # Fixed to 2
-    # num_layers = 2 # Fixed based on results
-    batch_size = trial.suggest_categorical("batch_size", [32, 128, 256]) # Focused range
-    lstm_expansion = trial.suggest_float("lstm_expansion", 0.85, 0.95) # Narrowed range significantly
-    # activation_fn_name = trial.suggest_categorical("activation_fn", ["relu", "tanh", "gelu"]) # Fixed to relu
-    activation_fn_name = "relu" # Fixed based on results
+    # --- 1. Define Fixed and Tunable Hyperparameters ---
+    # Tunable
+    lr = trial.suggest_float("lr", 1e-3, 5e-3, log=True)
+    dropout_rate = trial.suggest_float("dropout_rate", 0.25, 0.50)
+    weight_decay = trial.suggest_float("weight_decay", 1e-5, 2e-3, log=True)
+    lstm_dim = trial.suggest_categorical("lstm_dim", [512, 1024])
+    # num_layers = trial.suggest_categorical("num_layers", [1, 2])
+    batch_size = trial.suggest_categorical("batch_size", [128, 256])
+    sequence_length = trial.suggest_int("sequence_length", 20, 30)
+    lstm_expansion = trial.suggest_float("lstm_expansion", 0.85, 0.95)
 
-    # --- Fixed Parameters for Trial ---
+    
+    # Fixed (based on previous results or decisions)
+    # lstm_dim = 256
+    # batch_size = 32
+    num_layers = 1
+    activation_fn_name = "relu"
+
+    # Store fixed parameters as user attributes
+    fixed_params_for_trial = {
+        # "lstm_dim": lstm_dim,
+        "num_layers": num_layers,
+        # "batch_size": batch_size,
+        "activation_fn_name": activation_fn_name
+    }
+    trial.set_user_attr("fixed_params", fixed_params_for_trial)
+
+    # Combine all parameters for setup and printing (optional but convenient here)
+    # Note: trial.params only contains the suggested values at this point
+    current_params = {**fixed_params_for_trial, **trial.params}
+
+    # --- Fixed Parameters for Trial Run --- (Separate from hyperparams)
     output_dim = 1
-    tuning_epochs = 15 # Initial number of epochs for tuning trials
+    tuning_epochs = 15
 
-    # --- 2. Setup Model, Optimizer ---
-    model = MtlsModel( # Use MtlsModel
+    # --- 2. Setup Model, Optimizer using current_params ---
+    model = MtlsModel(
         input_dim=input_dim,
-        lstm_dim=lstm_dim, # Use lstm_dim
+        lstm_dim=current_params["lstm_dim"],
         output_dim=output_dim,
-        lstm_expansion_factor=lstm_expansion, # Use lstm_expansion
-        num_layers=num_layers,
-        dropout_rate=dropout_rate,
-        activation_fn_name=activation_fn_name
+        lstm_expansion_factor=current_params["lstm_expansion"],
+        num_layers=current_params["num_layers"],
+        dropout_rate=current_params["dropout_rate"],
+        activation_fn_name=current_params["activation_fn_name"]
     ).to(device)
 
     loss_fn = nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+    optimizer = torch.optim.Adam(model.parameters(), lr=current_params["lr"], weight_decay=current_params["weight_decay"])
 
-    # --- 3. Create DataLoaders for this trial --- (Identical)
-    train_dataset = TabularDataset(X_train_scaled, y_train)
-    val_dataset = TabularDataset(X_val_scaled, y_val)
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+    # --- 3. Create DataLoaders for this trial using SequenceDataset ---
+    try:
+        train_dataset = SequenceDataset(X_train_scaled, y_train, current_params["sequence_length"])
+        val_dataset = SequenceDataset(X_val_scaled, y_val, current_params["sequence_length"])
+    except ValueError as e:
+        print(f"Skipping trial due to incompatible sequence_length: {e}")
+        return float('inf')
 
-    # Updated print statement for LSTM
-    print(f"\nTrial {trial.number}: PARAMS lr={lr:.6f}, dropout={dropout_rate:.2f}, wd={weight_decay:.6f}, " \
-          f"lstm_dim={lstm_dim}, layers={num_layers}, expansion={lstm_expansion:.2f}, act={activation_fn_name}, " \
-          f"bs={batch_size}, epochs={tuning_epochs}")
+    train_loader = DataLoader(train_dataset, batch_size=current_params["batch_size"], shuffle=False)
+    val_loader = DataLoader(val_dataset, batch_size=current_params["batch_size"], shuffle=False)
 
-    # --- 4. Training & Validation Loop --- (Identical)
+    # Updated print statement using combined params dictionary
+    print(f"\nTrial {trial.number}: PARAMS lr={current_params['lr']:.6f}, dropout={current_params['dropout_rate']:.2f}, wd={current_params['weight_decay']:.6f}, "
+          f"lstm_dim={current_params['lstm_dim']}, layers={current_params['num_layers']}, seq_len={current_params['sequence_length']}, expansion={current_params['lstm_expansion']:.2f}, act={current_params['activation_fn_name']}, "
+          f"bs={current_params['batch_size']}, epochs={tuning_epochs}")
+
+    # --- 4. Training & Validation Loop --- (No changes needed here)
     best_val_loss = float('inf')
     for epoch in range(tuning_epochs):
         model.train()
         epoch_train_loss = 0.0
         for features, targets in train_loader:
-            loss = train_step(model, features, targets, loss_fn, optimizer, device)
+            loss = train_step(model, features, targets, loss_fn, optimizer, device, clip_value=1.0) # [0.5 1.0] tested, higher is, more likely nan. even 1.0 is behaving better now
             epoch_train_loss += loss
 
         val_loss = evaluate_model(model, val_loader, loss_fn, device)
@@ -155,7 +182,7 @@ def main():
     ]
     TEST_SET_RATIO = 0.2
     VALIDATION_SET_RATIO = 0.2
-    N_TRIALS = 50 # Initial number of Optuna trials
+    N_TRIALS = 20 # Initial number of Optuna trials
 
     # --- Device Configuration --- (Identical)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -201,6 +228,9 @@ def main():
             if X_train[col].dtype == 'bool':
                 X_train[col] = X_train[col].astype(int)
                 if col in X_val.columns: X_val[col] = X_val[col].astype(int)
+                # Convert in test set too if needed
+                # if 'X_test' in locals() and col in X_test.columns:
+                #     X_test[col] = X_test[col].astype(int)
 
         # --- 4. Scaling --- (Identical)
         print("\nScaling features...")
@@ -247,17 +277,22 @@ def main():
 
             for i in range(num_trials_to_print):
                 trial = complete_trials[i]
-                print(f"  Rank {i+1}: Value (RMSE): {trial.value:.4f}, Params: {trial.params}")
+                # Retrieve tuned params and fixed params (stored as user_attrs)
+                tuned_params = trial.params
+                fixed_params = trial.user_attrs.get("fixed_params", {}) # Use .get for safety
+                # Combine tuned params from trial with fixed params
+                all_params = {**fixed_params, **tuned_params}
+                print(f"  Rank {i+1}: Value (RMSE): {trial.value:.4f}, Params: {all_params}")
 
                 if i < num_trials_to_save:
                     params_save_dir = os.path.join(project_root, "artifacts", "params", "pytorch")
                     os.makedirs(params_save_dir, exist_ok=True)
                     rank_str = str(i + 1).zfill(2)
                     # Changed filename prefix to mtls_
-                    params_filename = f"mtls_{rank_str}_params_{TARGET_VARIABLE}.json"
+                    params_filename = f"xxxmtls_seq_{rank_str}_{TARGET_VARIABLE}_params.json"
                     params_save_path = os.path.join(params_save_dir, params_filename)
                     try:
-                        params_to_save = trial.params
+                        params_to_save = all_params
                         with open(params_save_path, 'w') as f:
                             json.dump(params_to_save, f, indent=4)
                         print(f"    Parameters saved to: {params_save_path}")

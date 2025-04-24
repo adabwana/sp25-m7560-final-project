@@ -31,7 +31,7 @@ if src_path not in sys.path:
 # Place imports here, now that src_path is potentially added
 from python.utils.data_utils import load_data
 from python.utils.preprocessing import preprocess_data
-from python.datasets import TabularDataset
+from python.datasets.tabular_dataset import TabularDataset
 from python.models.gruey_architecture import GrueyModel
 from torch.utils.data import DataLoader
 # from python.evaluation.evaluation import evaluate_saved_model
@@ -110,47 +110,60 @@ def objective(trial: optuna.trial.Trial,
     """Objective function for Optuna hyperparameter tuning."""
 
     # --- 1. Suggest Hyperparameters (Ordered roughly by tuning frequency) ---
-    # Refined ranges based on previous run results
+    # Tunable
     lr = trial.suggest_float("lr", 1e-3, 5e-3, log=True) # Further narrowed range
     dropout_rate = trial.suggest_float("dropout_rate", 0.25, 0.42) # Further refined range
     weight_decay = trial.suggest_float("weight_decay", 1e-6, 1e-5, log=True) # Further narrowed range
     gru_dim = trial.suggest_categorical("gru_dim", [128, 256, 512]) # Fixed to 128
-    # gru_dim = 128 # Fixed based on results
     num_layers = trial.suggest_int("num_layers", 1, 2) # Re-enabled tuning (1 or 2)
     batch_size = trial.suggest_categorical("batch_size", [64, 128]) # Kept [32, 64]
     gru_expansion = trial.suggest_float("gru_expansion", 0.5, 1.4) # Slightly tightened upper bound
     # activation_fn_name = trial.suggest_categorical("activation_fn", ["relu", "tanh", "gelu"]) # Added activation tuning
+
+    # Fixed (based on previous results or decisions)
+    # gru_dim = 128 # Currently tunable
     activation_fn_name = "relu" # Fixed based on results
 
-    # --- Fixed Parameters for Trial ---
+    # Store fixed parameters as user attributes
+    fixed_params_for_trial = {
+        # "gru_dim": gru_dim, # Currently tunable
+        "activation_fn_name": activation_fn_name
+    }
+    trial.set_user_attr("fixed_params", fixed_params_for_trial)
+
+    # Combine all parameters for setup and printing
+    current_params = {**fixed_params_for_trial, **trial.params}
+
+    # --- Fixed Parameters for Trial Run --- (Separate from hyperparams)
     output_dim = 1
     tuning_epochs = 20 # Fixed number of epochs for tuning trials
 
-    # --- 2. Setup Model, Optimizer ---
+    # --- 2. Setup Model, Optimizer using current_params ---
     model = GrueyModel(
         input_dim=input_dim,
-        gru_dim=gru_dim,
+        gru_dim=current_params["gru_dim"],
         output_dim=output_dim,
-        gru_expansion_factor=gru_expansion,
-        num_layers=num_layers,
-        dropout_rate=dropout_rate,
-        activation_fn_name=activation_fn_name # Pass activation name
+        gru_expansion_factor=current_params["gru_expansion"],
+        num_layers=current_params["num_layers"],
+        dropout_rate=current_params["dropout_rate"],
+        activation_fn_name=current_params["activation_fn_name"]
     ).to(device)
 
     loss_fn = nn.MSELoss()
     # Use suggested weight_decay in the optimizer
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+    optimizer = torch.optim.Adam(model.parameters(), lr=current_params["lr"], weight_decay=current_params["weight_decay"])
 
     # --- 3. Create DataLoaders for this trial ---
     train_dataset = TabularDataset(X_train_scaled, y_train)
     val_dataset = TabularDataset(X_val_scaled, y_val)
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+    # Use batch_size from current_params
+    train_loader = DataLoader(train_dataset, batch_size=current_params["batch_size"], shuffle=False)
+    val_loader = DataLoader(val_dataset, batch_size=current_params["batch_size"], shuffle=False)
 
-    # Updated print statement to include activation_fn
-    print(f"\nTrial {trial.number}: PARAMS lr={lr:.6f}, dropout={dropout_rate:.2f}, wd={weight_decay:.6f}, " \
-          f"gru_dim={gru_dim}, layers={num_layers}, expansion={gru_expansion:.2f}, act={activation_fn_name}, " \
-          f"bs={batch_size}, epochs={tuning_epochs}")
+    # Updated print statement using combined params dictionary
+    print(f"\nTrial {trial.number}: PARAMS lr={current_params['lr']:.6f}, dropout={current_params['dropout_rate']:.2f}, wd={current_params['weight_decay']:.6f}, "
+          f"gru_dim={current_params['gru_dim']}, layers={current_params['num_layers']}, expansion={current_params['gru_expansion']:.2f}, act={current_params['activation_fn_name']}, "
+          f"bs={current_params['batch_size']}, epochs={tuning_epochs}")
 
     # --- 4. Training & Validation Loop ---
     best_val_loss = float('inf') # Initialize best validation loss tracking
@@ -291,9 +304,13 @@ def main():
         print("\nBest trial found:")
         try: # Add try-except in case no trials complete
             best_trial = study.best_trial
+            # Retrieve tuned and fixed params for the best trial
+            tuned_params_best = best_trial.params
+            fixed_params_best = best_trial.user_attrs.get("fixed_params", {})
+            all_params_best = {**fixed_params_best, **tuned_params_best}
             print(f"  Value (Min Validation RMSE): {best_trial.value:.4f}")
-            print("  Best Parameters: ")
-            for key, value in best_trial.params.items():
+            print("  Best Parameters (Combined): ")
+            for key, value in all_params_best.items(): # Print combined params
                 print(f"    {key}: {value}")
         except ValueError:
              print("  No best trial found (likely no trials completed successfully).")
@@ -309,16 +326,21 @@ def main():
 
             for i in range(num_trials_to_print):
                 trial = complete_trials[i]
-                print(f"  Rank {i+1}: Value (RMSE): {trial.value:.4f}, Params: {trial.params}")
+                # Retrieve tuned params and fixed params (stored as user_attrs)
+                tuned_params = trial.params
+                fixed_params = trial.user_attrs.get("fixed_params", {}) # Use .get for safety
+                # Combine tuned params from trial with fixed params
+                all_params = {**fixed_params, **tuned_params}
+                print(f"  Rank {i+1}: Value (RMSE): {trial.value:.4f}, Params: {all_params}") # Print combined
 
                 if i < num_trials_to_save:
                     params_save_dir = os.path.join(project_root, "artifacts", "params", "pytorch")
                     os.makedirs(params_save_dir, exist_ok=True)
                     rank_str = str(i + 1).zfill(2)
-                    params_filename = f"gruey_{rank_str}_params_{TARGET_VARIABLE}.json"
+                    params_filename = f"xxxgruey_{rank_str}_{TARGET_VARIABLE}_params.json"
                     params_save_path = os.path.join(params_save_dir, params_filename)
                     try:
-                        params_to_save = trial.params
+                        params_to_save = all_params # Save the combined dict
                         with open(params_save_path, 'w') as f:
                             json.dump(params_to_save, f, indent=4)
                         print(f"    Parameters saved to: {params_save_path}")

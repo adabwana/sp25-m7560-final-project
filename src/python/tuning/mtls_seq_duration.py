@@ -13,6 +13,7 @@ from sklearn.preprocessing import StandardScaler
 import optuna
 import json
 import torch.nn.utils as utils # Import utils for clipping
+from sklearn.metrics import r2_score # Import r2_score
 
 # Add project root for imports from other modules like utils
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
@@ -58,18 +59,48 @@ def train_step(model: torch.nn.Module,
 def evaluate_model(model: torch.nn.Module,
                    data_loader: DataLoader,
                    loss_fn: torch.nn.modules.loss._Loss,
-                   device: torch.device) -> float:
+                   device: torch.device) -> Tuple[float, float]: # Return RMSE and R2
+    """Evaluates the model on the provided data loader, calculating RMSE and R2.
+
+    Args:
+        model (torch.nn.Module): The model to evaluate.
+        data_loader (DataLoader): DataLoader for the evaluation set (e.g., validation).
+        loss_fn (torch.nn.modules.loss._Loss): The loss function (used for MSE calculation).
+        device (torch.device): The device to run the computation on.
+
+    Returns:
+        Tuple[float, float]: A tuple containing the average RMSE and the R2 score.
+    """
     model.eval()
     total_loss = 0.0
+    all_targets = []
+    all_predictions = []
     with torch.no_grad():
         for features, targets in data_loader:
             features, targets = features.to(device), targets.to(device)
             predictions = model(features)
+            # Assuming targets are (batch_size, 1) and predictions are (batch_size, 1)
+            # Loss function handles the shape
             loss = loss_fn(predictions, targets) # Calculate MSE loss
             total_loss += loss.item()
+            # Store targets and predictions for R2 calculation
+            all_targets.append(targets.cpu()) 
+            all_predictions.append(predictions.cpu())
+
     avg_mse_loss = total_loss / len(data_loader)
     avg_rmse_loss = avg_mse_loss**0.5 # Calculate RMSE
-    return avg_rmse_loss
+
+    # Concatenate all targets and predictions
+    all_targets_np = torch.cat(all_targets).numpy()
+    all_predictions_np = torch.cat(all_predictions).numpy()
+
+    # Calculate R2 score
+    try:
+        r2 = r2_score(all_targets_np, all_predictions_np)
+    except ValueError: 
+        r2 = float('nan') 
+
+    return avg_rmse_loss, r2
 
 # --- Optuna Objective Function (Adapted for MtlsModel) ---
 def objective(trial: optuna.trial.Trial,
@@ -84,22 +115,22 @@ def objective(trial: optuna.trial.Trial,
     lr = trial.suggest_float("lr", 1e-3, 5e-3, log=True)
     dropout_rate = trial.suggest_float("dropout_rate", 0.25, 0.50)
     weight_decay = trial.suggest_float("weight_decay", 1e-5, 2e-3, log=True)
-    lstm_dim = trial.suggest_categorical("lstm_dim", [128, 256, 512])
+    # lstm_dim = trial.suggest_categorical("lstm_dim", [512, 1024])
     # num_layers = trial.suggest_categorical("num_layers", [1, 2])
-    batch_size = trial.suggest_categorical("batch_size", [32, 64, 128])
-    sequence_length = trial.suggest_int("sequence_length", 15, 30)
+    batch_size = trial.suggest_categorical("batch_size", [256, 512])
+    sequence_length = trial.suggest_int("sequence_length", 25, 35)
     lstm_expansion = trial.suggest_float("lstm_expansion", 0.85, 0.95)
 
     
     # Fixed (based on previous results or decisions)
-    # lstm_dim = 256
+    lstm_dim = 512
     # batch_size = 32
     num_layers = 1
     activation_fn_name = "relu"
 
     # Store fixed parameters as user attributes
     fixed_params_for_trial = {
-        # "lstm_dim": lstm_dim,
+        "lstm_dim": lstm_dim,
         "num_layers": num_layers,
         # "batch_size": batch_size,
         "activation_fn_name": activation_fn_name
@@ -145,7 +176,8 @@ def objective(trial: optuna.trial.Trial,
           f"bs={current_params['batch_size']}, epochs={tuning_epochs}")
 
     # --- 4. Training & Validation Loop --- (No changes needed here)
-    best_val_loss = float('inf')
+    best_val_loss = float('inf') # Initialize best validation loss tracking (RMSE)
+    best_r2_at_best_rmse = -float('inf') # Initialize R2 tracking
     for epoch in range(tuning_epochs):
         model.train()
         epoch_train_loss = 0.0
@@ -153,18 +185,28 @@ def objective(trial: optuna.trial.Trial,
             loss = train_step(model, features, targets, loss_fn, optimizer, device, clip_value=1.0) # [0.5 1.0] tested, higher is, more likely nan. even 1.0 is behaving better now
             epoch_train_loss += loss
 
-        val_loss = evaluate_model(model, val_loader, loss_fn, device)
-        print(f"  Epoch {epoch+1}/{tuning_epochs}, Val RMSE: {val_loss:.4f}")
+        # --- Evaluate on Validation Set ---
+        val_rmse, r2 = evaluate_model(model, val_loader, loss_fn, device)
+        print(f"  Epoch {epoch+1}/{tuning_epochs}, Val RMSE: {val_rmse:.4f}, R2: {r2:.4f}")
 
-        best_val_loss = min(best_val_loss, val_loss)
+        # --- Update Best Validation Loss & Corresponding R2 ---
+        if val_rmse < best_val_loss:
+            best_val_loss = val_rmse
+            best_r2_at_best_rmse = r2 # Store the R2 score when RMSE improves
 
-        trial.report(val_loss, epoch)
+        # --- Optuna Reporting & Pruning (Using RMSE) ---
+        # Report the current epoch's RMSE loss for pruning purposes
+        trial.report(val_rmse, epoch)
         if trial.should_prune():
             print("  Trial pruned!")
             raise optuna.exceptions.TrialPruned()
 
-    # --- 5. Return Final Metric --- (Identical)
-    print(f"  Trial {trial.number} finished. Best Val RMSE: {best_val_loss:.4f}")
+    # --- Store Best R2 Score as User Attribute --- 
+    trial.set_user_attr("best_r2_score", best_r2_at_best_rmse)
+
+    # --- 5. Return Final Metric (RMSE for Optuna Optimization) ---
+    # Return the *best* validation RMSE observed during this trial
+    print(f"  Trial {trial.number} finished. Best Val RMSE: {best_val_loss:.4f}, Best R2: {best_r2_at_best_rmse:.4f}")
     return best_val_loss
 
 def main():
@@ -262,9 +304,18 @@ def main():
         print("\nBest trial found:")
         try:
             best_trial = study.best_trial
+            # Retrieve tuned and fixed params for the best trial
+            tuned_params_best = best_trial.params
+            fixed_params_best = best_trial.user_attrs.get("fixed_params", {})
+            all_params_best = {**fixed_params_best, **tuned_params_best}
+            # Retrieve the best R2 score
+            best_r2_score = best_trial.user_attrs.get("best_r2_score", None)
+
             print(f"  Value (Min Validation RMSE): {best_trial.value:.4f}")
-            print("  Best Parameters: ")
-            for key, value in best_trial.params.items():
+            if best_r2_score is not None:
+                print(f"  Corresponding R2 Score: {best_r2_score:.4f}")
+            print("  Best Parameters (Combined): ")
+            for key, value in all_params_best.items(): # Print combined params
                 print(f"    {key}: {value}")
         except ValueError:
              print("  No best trial found (likely no trials completed successfully).")
@@ -282,17 +333,24 @@ def main():
                 fixed_params = trial.user_attrs.get("fixed_params", {}) # Use .get for safety
                 # Combine tuned params from trial with fixed params
                 all_params = {**fixed_params, **tuned_params}
-                print(f"  Rank {i+1}: Value (RMSE): {trial.value:.4f}, Params: {all_params}")
+                # Retrieve the best R2 score for this trial
+                r2_score_trial = trial.user_attrs.get("best_r2_score", None)
+                r2_print = f", R2: {r2_score_trial:.4f}" if r2_score_trial is not None else ""
+                print(f"  Rank {i+1}: Value (RMSE): {trial.value:.4f}{r2_print}, Params: {all_params}") # Print combined and R2
 
                 if i < num_trials_to_save:
                     params_save_dir = os.path.join(project_root, "artifacts", "params", "pytorch")
                     os.makedirs(params_save_dir, exist_ok=True)
                     rank_str = str(i + 1).zfill(2)
-                    # Changed filename prefix to mtls_
-                    params_filename = f"mtls_seq_{rank_str}_params_{TARGET_VARIABLE}.json"
+                    # Changed filename prefix to mtls_seq_
+                    params_filename = f"mtls_seq_{rank_str}_{TARGET_VARIABLE}_params.json"
                     params_save_path = os.path.join(params_save_dir, params_filename)
                     try:
                         params_to_save = all_params
+                        # Add the validation RMSE and R2 score to the dictionary
+                        params_to_save["validation_rmse"] = trial.value
+                        if r2_score_trial is not None:
+                            params_to_save["validation_r2"] = r2_score_trial
                         with open(params_save_path, 'w') as f:
                             json.dump(params_to_save, f, indent=4)
                         print(f"    Parameters saved to: {params_save_path}")

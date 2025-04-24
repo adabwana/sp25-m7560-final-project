@@ -1,0 +1,12 @@
+{
+    "gru_dim": 512,
+    "activation_fn_name": "relu",
+    "lr": 0.002490928581468687,
+    "dropout_rate": 0.3264478638076855,
+    "weight_decay": 3.7641594622936905e-06,
+    "num_layers": 2,
+    "batch_size": 64,
+    "gru_expansion": 1.374816165130485,
+    "validation_rmse": 3.2360015268467595,
+    "validation_r2": 0.7229069471359253
+}

@@ -16,7 +16,7 @@ from python.datasets.sequence_dataset import SequenceDataset
 from python.utils.preprocessing import preprocess_data
 from sklearn.preprocessing import StandardScaler
 from python.models.mtls_architecture import MtlsModel
-from python.training.mtls_seq import train_step, evaluate_model # Import the functions
+from python.tuning.mtls_seq import train_step, evaluate_model # Import the functions
 
 # Helper function to create simple test data
 def create_test_data(num_samples=20, num_features=5):

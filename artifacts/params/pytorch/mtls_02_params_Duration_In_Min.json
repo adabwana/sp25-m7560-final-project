@@ -1,9 +1,0 @@
-{
-    "lr": 0.0024430571734738,
-    "dropout_rate": 0.49815412709657647,
-    "weight_decay": 0.001207886449547713,
-    "lstm_dim": 256,
-    "batch_size": 32,
-    "lstm_expansion": 0.8856151161437498,
-    "sequence_length": 16
-}

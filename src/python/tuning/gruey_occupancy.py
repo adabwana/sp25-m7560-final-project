@@ -12,6 +12,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler # Import StandardScaler
 import optuna # Import Optuna
 import json # Import json for saving params
+from sklearn.metrics import r2_score # Import r2_score
 
 # Add project root for imports from other modules like utils
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
@@ -31,7 +32,7 @@ if src_path not in sys.path:
 # Place imports here, now that src_path is potentially added
 from python.utils.data_utils import load_data
 from python.utils.preprocessing import preprocess_data
-from python.datasets import TabularDataset
+from python.datasets.tabular_dataset import TabularDataset
 from python.models.gruey_architecture import GrueyModel
 from torch.utils.data import DataLoader
 # from python.evaluation.evaluation import evaluate_saved_model
@@ -76,7 +77,7 @@ def train_step(model: torch.nn.Module,
 def evaluate_model(model: torch.nn.Module,
                    data_loader: DataLoader,
                    loss_fn: torch.nn.modules.loss._Loss,
-                   device: torch.device) -> float: # Added device param
+                   device: torch.device) -> Tuple[float, float]: # Return both RMSE and R2
     """Evaluates the model on the provided data loader.
 
     Args:
@@ -86,20 +87,33 @@ def evaluate_model(model: torch.nn.Module,
         device (torch.device): The device to run the computation on.
 
     Returns:
-        float: The average RMSE over the evaluation dataset.
+        Tuple[float, float]: A tuple containing the average RMSE and the R2 score.
     """
     model.eval() # Set model to evaluation mode
     total_loss = 0.0
+    all_targets = []
+    all_predictions = []
     with torch.no_grad(): # Turn off gradient computation
         for features, targets in data_loader:
             features, targets = features.to(device), targets.to(device)
             predictions = model(features)
             loss = loss_fn(predictions, targets) # Calculate MSE loss
             total_loss += loss.item()
-    
+            # Store targets and predictions for R2 calculation
+            all_targets.append(targets.cpu())
+            all_predictions.append(predictions.cpu())
+
     avg_mse_loss = total_loss / len(data_loader)
     avg_rmse_loss = avg_mse_loss**0.5 # Calculate RMSE from average MSE
-    return avg_rmse_loss
+
+    # Concatenate all targets and predictions
+    all_targets_np = torch.cat(all_targets).numpy()
+    all_predictions_np = torch.cat(all_predictions).numpy()
+
+    # Calculate R2 score
+    r2 = r2_score(all_targets_np, all_predictions_np)
+
+    return avg_rmse_loss, r2 # Return both RMSE and R2
 
 # --- Optuna Objective Function ---
 def objective(trial: optuna.trial.Trial,
@@ -110,51 +124,67 @@ def objective(trial: optuna.trial.Trial,
     """Objective function for Optuna hyperparameter tuning."""
 
     # --- 1. Suggest Hyperparameters (Ordered roughly by tuning frequency) ---
-    # Refined ranges based on previous run results (Occupancy target)
+    # Tunable
     lr = trial.suggest_float("lr", 1.2e-3, 5e-3, log=True) # Slightly shifted lower bound
     dropout_rate = trial.suggest_float("dropout_rate", 0.25, 0.42) # Kept range
     weight_decay = trial.suggest_float("weight_decay", 1e-6, 5e-6, log=True) # Narrowed upper bound
     # gru_dim = trial.suggest_categorical("gru_dim", [128, 256, 512]) # Fixed to 512
-    gru_dim = 512 # Fixed based on Occupancy results
     num_layers = trial.suggest_int("num_layers", 2, 3) # Fixed to 2
-    # num_layers = 2 # Fixed based on Occupancy results
     batch_size = trial.suggest_categorical("batch_size", [64, 128]) # Kept [64, 128]
     gru_expansion = trial.suggest_float("gru_expansion", 0.6, 1.4) # Tightened range
     # activation_fn_name = trial.suggest_categorical("activation_fn", ["relu", "tanh", "gelu"]) # Added activation tuning
+
+    # Fixed (based on previous results or decisions)
+    gru_dim = 512 # Fixed based on Occupancy results
+    # num_layers = 2 # Now tunable
     activation_fn_name = "relu" # Fixed based on results
 
-    # --- Fixed Parameters for Trial ---
+    # Store fixed parameters as user attributes
+    fixed_params_for_trial = {
+        "gru_dim": gru_dim,
+        # "num_layers": num_layers, # No longer fixed
+        "activation_fn_name": activation_fn_name
+    }
+    trial.set_user_attr("fixed_params", fixed_params_for_trial)
+
+    # Combine all parameters for setup and printing
+    current_params = {**fixed_params_for_trial, **trial.params}
+
+
+    # --- Fixed Parameters for Trial Run --- (Separate from hyperparams)
     output_dim = 1
     tuning_epochs = 20 # Fixed number of epochs for tuning trials
 
-    # --- 2. Setup Model, Optimizer ---
+    # --- 2. Setup Model, Optimizer using current_params ---
     model = GrueyModel(
         input_dim=input_dim,
-        gru_dim=gru_dim,
+        gru_dim=current_params["gru_dim"],
         output_dim=output_dim,
-        gru_expansion_factor=gru_expansion,
-        num_layers=num_layers,
-        dropout_rate=dropout_rate,
-        activation_fn_name=activation_fn_name # Pass activation name
+        gru_expansion_factor=current_params["gru_expansion"],
+        num_layers=current_params["num_layers"],
+        dropout_rate=current_params["dropout_rate"],
+        activation_fn_name=current_params["activation_fn_name"] # Pass activation name
     ).to(device)
 
     loss_fn = nn.MSELoss()
     # Use suggested weight_decay in the optimizer
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+    optimizer = torch.optim.Adam(model.parameters(), lr=current_params["lr"], weight_decay=current_params["weight_decay"])
 
     # --- 3. Create DataLoaders for this trial ---
     train_dataset = TabularDataset(X_train_scaled, y_train)
     val_dataset = TabularDataset(X_val_scaled, y_val)
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+    # Use batch_size from current_params
+    train_loader = DataLoader(train_dataset, batch_size=current_params["batch_size"], shuffle=False)
+    val_loader = DataLoader(val_dataset, batch_size=current_params["batch_size"], shuffle=False)
 
-    # Updated print statement to include activation_fn
-    print(f"\nTrial {trial.number}: PARAMS lr={lr:.6f}, dropout={dropout_rate:.2f}, wd={weight_decay:.6f}, " \
-          f"gru_dim={gru_dim}, layers={num_layers}, expansion={gru_expansion:.2f}, act={activation_fn_name}, " \
-          f"bs={batch_size}, epochs={tuning_epochs}")
+    # Updated print statement using combined params dictionary
+    print(f"\nTrial {trial.number}: PARAMS lr={current_params['lr']:.6f}, dropout={current_params['dropout_rate']:.2f}, wd={current_params['weight_decay']:.6f}, "
+          f"gru_dim={current_params['gru_dim']}, layers={current_params['num_layers']}, expansion={current_params['gru_expansion']:.2f}, act={current_params['activation_fn_name']}, "
+          f"bs={current_params['batch_size']}, epochs={tuning_epochs}")
 
     # --- 4. Training & Validation Loop ---
-    best_val_loss = float('inf') # Initialize best validation loss tracking
+    best_val_loss = float('inf') # Initialize best validation loss tracking (RMSE)
+    best_r2_at_best_rmse = -float('inf') # Initialize R2 tracking
     for epoch in range(tuning_epochs): # Use fixed tuning_epochs
         model.train()
         epoch_train_loss = 0.0
@@ -165,22 +195,27 @@ def objective(trial: optuna.trial.Trial,
         # avg_epoch_train_loss = epoch_train_loss / len(train_loader)
 
         # --- Evaluate on Validation Set ---
-        val_loss = evaluate_model(model, val_loader, loss_fn, device)
-        print(f"  Epoch {epoch+1}/{tuning_epochs}, Val RMSE: {val_loss:.4f}")
+        val_rmse, r2 = evaluate_model(model, val_loader, loss_fn, device)
+        print(f"  Epoch {epoch+1}/{tuning_epochs}, Val RMSE: {val_rmse:.4f}, R2: {r2:.4f}")
 
-        # --- Update Best Validation Loss ---
-        best_val_loss = min(best_val_loss, val_loss)
+        # --- Update Best Validation Loss & Corresponding R2 ---
+        if val_rmse < best_val_loss:
+            best_val_loss = val_rmse
+            best_r2_at_best_rmse = r2 # Store the R2 score when RMSE improves
 
-        # --- Optuna Reporting & Pruning ---
-        # Report the current epoch's loss for pruning purposes
-        trial.report(val_loss, epoch)
+        # --- Optuna Reporting & Pruning (Using RMSE) ---
+        # Report the current epoch's RMSE loss for pruning purposes
+        trial.report(val_rmse, epoch)
         if trial.should_prune():
             print("  Trial pruned!")
             raise optuna.exceptions.TrialPruned()
 
-    # --- 5. Return Final Metric ---
-    # Return the *best* validation loss observed during this trial
-    print(f"  Trial {trial.number} finished. Best Val RMSE: {best_val_loss:.4f}")
+    # --- Store Best R2 Score as User Attribute --- 
+    trial.set_user_attr("best_r2_score", best_r2_at_best_rmse)
+
+    # --- 5. Return Final Metric (RMSE for Optuna Optimization) ---
+    # Return the *best* validation RMSE observed during this trial
+    print(f"  Trial {trial.number} finished. Best Val RMSE: {best_val_loss:.4f}, Best R2: {best_r2_at_best_rmse:.4f}")
     return best_val_loss
 
 def main():
@@ -292,9 +327,18 @@ def main():
         print("\nBest trial found:")
         try: # Add try-except in case no trials complete
             best_trial = study.best_trial
+            # Retrieve tuned and fixed params for the best trial
+            tuned_params_best = best_trial.params
+            fixed_params_best = best_trial.user_attrs.get("fixed_params", {})
+            all_params_best = {**fixed_params_best, **tuned_params_best}
+            # Retrieve the best R2 score
+            best_r2_score = best_trial.user_attrs.get("best_r2_score", None)
+
             print(f"  Value (Min Validation RMSE): {best_trial.value:.4f}")
-            print("  Best Parameters: ")
-            for key, value in best_trial.params.items():
+            if best_r2_score is not None:
+                print(f"  Corresponding R2 Score: {best_r2_score:.4f}")
+            print("  Best Parameters (Combined): ")
+            for key, value in all_params_best.items(): # Print combined params
                 print(f"    {key}: {value}")
         except ValueError:
              print("  No best trial found (likely no trials completed successfully).")
@@ -310,16 +354,28 @@ def main():
 
             for i in range(num_trials_to_print):
                 trial = complete_trials[i]
-                print(f"  Rank {i+1}: Value (RMSE): {trial.value:.4f}, Params: {trial.params}")
+                # Retrieve tuned params and fixed params (stored as user_attrs)
+                tuned_params = trial.params
+                fixed_params = trial.user_attrs.get("fixed_params", {}) # Use .get for safety
+                # Combine tuned params from trial with fixed params
+                all_params = {**fixed_params, **tuned_params}
+                # Retrieve the best R2 score for this trial
+                r2_score_trial = trial.user_attrs.get("best_r2_score", None)
+                r2_print = f", R2: {r2_score_trial:.4f}" if r2_score_trial is not None else ""
+                print(f"  Rank {i+1}: Value (RMSE): {trial.value:.4f}{r2_print}, Params: {all_params}") # Print combined and R2
 
                 if i < num_trials_to_save:
                     params_save_dir = os.path.join(project_root, "artifacts", "params", "pytorch")
                     os.makedirs(params_save_dir, exist_ok=True)
                     rank_str = str(i + 1).zfill(2)
-                    params_filename = f"gruey_{rank_str}_params_{TARGET_VARIABLE}.json"
+                    params_filename = f"gruey_{rank_str}_{TARGET_VARIABLE}_params.json"
                     params_save_path = os.path.join(params_save_dir, params_filename)
                     try:
-                        params_to_save = trial.params
+                        params_to_save = all_params # Save the combined dict
+                        # Add the validation RMSE and R2 score to the dictionary
+                        params_to_save["validation_rmse"] = trial.value
+                        if r2_score_trial is not None:
+                            params_to_save["validation_r2"] = r2_score_trial
                         with open(params_save_path, 'w') as f:
                             json.dump(params_to_save, f, indent=4)
                         print(f"    Parameters saved to: {params_save_path}")
