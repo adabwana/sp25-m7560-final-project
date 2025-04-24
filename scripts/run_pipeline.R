@@ -35,7 +35,7 @@ DATA_FILENAME <- get_config_value(cfg, "data.filename")
 # Define split proportions explicitly
 INITIAL_SPLIT_PROP <- get_config_value(cfg, "data.trainval_holdout_prop") # Load from config
 # Note: TEST_SPLIT_PROP from config is now INITIAL_SPLIT_PROP. Holdout is 1 - INITIAL_SPLIT_PROP
-TARGET_VARIABLE <- get_config_value(cfg, "data.target_variable") # Load from config
+TARGET_VARIABLE <- get_config_value(cfg, "data.target_variable", "Occupancy") # Load from config
 CV_FOLDS <- get_config_value(cfg, "model.cv_folds")
 SEED <- get_config_value(cfg, "model.seed")
 TUNING_METRIC <- get_config_value(cfg, "model.tuning_metric")
