@@ -3,6 +3,8 @@
     "test_data_path": "data/processed/test_engineered.csv",
     "input_dim": null,
     "hidden_dim": 12,
+    "hidden_dims": "[12]",
+    "activations": "[\"ReLU\"]",
     "output_dim": 1,
     "learning_rate": 0.0001,
     "batch_size": 32,

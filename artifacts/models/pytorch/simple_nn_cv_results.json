@@ -1,7 +1,7 @@
 [
     {
         "fold": 1,
-        "best_val_loss_scaled": 1.0983976848044639,
+        "best_val_loss_scaled": 1.0983976873300842,
         "best_val_rmse_original": 62.76271736792672,
         "best_val_mae_original": 40.75078582763672,
         "best_val_r2_original": 0.05937671661376953,
@@ -13,9 +13,9 @@
     },
     {
         "fold": 2,
-        "best_val_loss_scaled": 0.8203004386465428,
+        "best_val_loss_scaled": 0.8203004270286883,
         "best_val_rmse_original": 56.35059148009229,
-        "best_val_mae_original": 38.77489471435547,
+        "best_val_mae_original": 38.7748908996582,
         "best_val_r2_original": 0.046177685260772705,
         "metrics": {
             "rmse_original": 56.43411491440151,
@@ -25,19 +25,19 @@
     },
     {
         "fold": 3,
-        "best_val_loss_scaled": 1.0238344459715536,
-        "best_val_rmse_original": 61.80933818695501,
-        "best_val_mae_original": 40.35443115234375,
-        "best_val_r2_original": 0.028398871421813965,
+        "best_val_loss_scaled": 1.023834475521314,
+        "best_val_rmse_original": 61.809350036649995,
+        "best_val_mae_original": 40.35444641113281,
+        "best_val_r2_original": 0.028398573398590088,
         "metrics": {
-            "rmse_original": 61.81857236035037,
-            "mae_original": 40.43135070800781,
-            "r2_original": 0.028108537197113037
+            "rmse_original": 61.81959719746037,
+            "mae_original": 40.433082580566406,
+            "r2_original": 0.02807629108428955
         }
     },
     {
         "fold": 4,
-        "best_val_loss_scaled": 0.9842868901915469,
+        "best_val_loss_scaled": 0.9842868821095612,
         "best_val_rmse_original": 60.437532316433966,
         "best_val_mae_original": 39.7296142578125,
         "best_val_r2_original": 0.0698845386505127,
@@ -49,14 +49,14 @@
     },
     {
         "fold": 5,
-        "best_val_loss_scaled": 0.875628701205981,
-        "best_val_rmse_original": 57.9846044693654,
-        "best_val_mae_original": 39.643795013427734,
-        "best_val_r2_original": 0.03246498107910156,
+        "best_val_loss_scaled": 0.8756324593293465,
+        "best_val_rmse_original": 57.98474762410586,
+        "best_val_mae_original": 39.64352035522461,
+        "best_val_r2_original": 0.03246021270751953,
         "metrics": {
-            "rmse_original": 57.99901711519019,
-            "mae_original": 39.61563491821289,
-            "r2_original": 0.031983911991119385
+            "rmse_original": 58.003632530374766,
+            "mae_original": 39.6234016418457,
+            "r2_original": 0.031829833984375
         }
     }
 ]

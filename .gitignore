@@ -57,3 +57,9 @@ Rplots.pdf
 
 xxx*
 prompts/
+
+artifacts/models/*.json
+data/processed/*.parquet
+data/processed/*.npy
+
+

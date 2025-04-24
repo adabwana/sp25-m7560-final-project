@@ -11,24 +11,16 @@ from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
-from python.datasets import TabularDataset
+from src.python.datasets import TabularDataset
 #from python.evaluation.evaluation import evaluate_model
-from python.models.simple_nn import SimpleNN
-from python.utils.data_utils import load_data
+from src.python.models.simple_nn import SimpleNN
+from src.python.utils.data_utils import load_data
+from src.python.utils.preprocessing import preprocess_data
 
 # Add project root for imports from other modules like utils
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 if project_root not in sys.path:
     sys.path.append(project_root)
-
-# If preprocess_data exists, import it (otherwise, define a simple version here)
-try:
-    from python.utils.preprocessing import preprocess_data
-except ImportError:
-    def preprocess_data(df, target, drop_cols):
-        X = df.drop(columns=drop_cols)
-        y = df[target]
-        return X, y
 
 
 def train_fold(model, train_loader, criterion, optimizer, device):
@@ -52,6 +44,17 @@ def main(args):
     print("Starting training for SimpleNN...")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
+
+    # Parse hidden_dims and activations from string to list
+    import ast
+    if hasattr(args, 'hidden_dims'):
+        args.hidden_dims = ast.literal_eval(args.hidden_dims)
+    else:
+        args.hidden_dims = [args.hidden_dim]
+    if hasattr(args, 'activations'):
+        args.activations = ast.literal_eval(args.activations)
+    else:
+        args.activations = ['ReLU'] * len(args.hidden_dims)
 
     # --- 1. Load Data --- 
     df = load_data(args.train_data_path)
@@ -115,9 +118,9 @@ def main(args):
         val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)
 
         # --- 4. Initialize Model, Loss, Optimizer --- 
-        model = SimpleNN(input_dim, args.hidden_dim, 1).to(device)
+        model = SimpleNN(input_dim, args.hidden_dims, 1, args.activations).to(device)
         criterion = nn.MSELoss() 
-        optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)
+        optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
 
         # --- 5. Training Loop --- 
         best_val_loss = float('inf')
@@ -208,9 +211,9 @@ def main(args):
     y_train_scaled = pd.Series(y_train_scaled, index=y_train.index)
     train_dataset = TabularDataset(X_train, y_train_scaled)
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
-    model = SimpleNN(input_dim, args.hidden_dim, 1).to(device)
+    model = SimpleNN(input_dim, args.hidden_dims, 1, args.activations).to(device)
     criterion = nn.MSELoss()
-    optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)
+    optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
     best_loss = float('inf')
     epochs_no_improve = 0
     for epoch in range(args.epochs):
@@ -251,7 +254,11 @@ if __name__ == '__main__':
     # Model hyperparameters
     parser.add_argument('--input_dim', type=int, default=None, help='Input dimension for the model (default: inferred from data)')
     parser.add_argument('--hidden_dim', type=int, default=12, help='Hidden layer dimension')
+    parser.add_argument('--hidden_dims', type=str, default='[12]', help='List of hidden layer sizes, e.g., "[32,16]" or "[64]"')
+    parser.add_argument('--activations', type=str, default='["ReLU"]', help='List of activation functions, e.g., "[\"ReLU\", \"Tanh\"]"')
     parser.add_argument('--output_dim', type=int, default=1, help='Output dimension (e.g., 1 for regression)') # Adjust based on target
+    parser.add_argument('--dropout', type=float, default=0.0, help='Dropout rate (0.0 for no dropout, e.g., 0.2)')
+    parser.add_argument('--weight_decay', type=float, default=0.0, help='L2 weight decay (e.g., 1e-4)')
 
     # Training arguments
     parser.add_argument('--learning_rate', type=float, default=0.0001, help='Learning rate')
