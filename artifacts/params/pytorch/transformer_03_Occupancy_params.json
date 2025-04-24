@@ -1,0 +1,12 @@
+{
+    "d_hid": 128,
+    "lr": 0.0008775420587223079,
+    "weight_decay": 2.169870893264364e-06,
+    "batch_size": 128,
+    "d_model": 64,
+    "dropout": 0.05396268418128469,
+    "nlayers": 2,
+    "nhead": 8,
+    "validation_rmse": 3.275249630875728,
+    "validation_r2": 0.7031344175338745
+}
