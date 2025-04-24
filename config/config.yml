@@ -27,7 +27,7 @@ model:
 # Parallel Processing
 parallel:
   enabled: true
-  num_cores: 3  # Fixed number for memory management
+  num_cores: 4  # Fixed number for memory management
 
 # Paths
 paths:
