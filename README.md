@@ -1,91 +1,93 @@
-# M7550: Final Project
+# M7560: Final Project
 
 ### Predicting Learning Commons Usage: Duration and Occupancy
 
-**By:** Emma Naiyue Liang, Ryan Renken, Jaryt Salvo, & Jason Turk
+**By:** Naiyue Liang (Emma), Ryan Renken, Jaryt Salvo, & Jason Turk
 
-**Fall 2024 | Math 7550 Statistical Learning I**
+**Spring 2025 | Math 7560 Statistical Learning II**
 
 *************
 
-## **[Please click HERE to view our Report Submission](https://adabwana.github.io/f24-m7550-final-project/).**
+## **[Please click HERE to view our Report Submission](https://adabwana.github.io/sp25-m7560-final-project/).**
 
 ## Project Overview
 
-In our project, we implement systematic prediction methodologies for analyzing student utilization patterns within the BGSU Learning Commons (LC). Through rigorous statistical learning approaches, we address two distinct prediction challenges: **_visit duration estimation_** and **_occupancy forecasting_**. The implementation leverages specialized modeling architectures to capture the unique characteristics of each prediction task.
+In this project, we look at how students use the BGSU Learning Commons (LC). Using statistical learning methods, we tackle two main prediction tasks: figuring out how long students stay (**_visit duration estimation_**) and how many students are there at a given time (**_occupancy forecasting_**). We use different modeling approaches designed to handle the specific details of each task.
 
 ## Data Architecture
 
-The research framework employs a comprehensive dataset spanning two academic years. The training corpus encompasses Fall 2016 through Spring 2017, providing the foundation for model development and parameter optimization. Our validation framework utilizes subsequent academic year data (Fall 2017 - Spring 2018) to assess model generalization and stability. The feature space integrates **_demographic indicators_**, **_academic metrics_**, and **_temporal patterns_**, while accounting for an observed senior-class representation bias in the underlying data collection process.
+We used a large dataset covering two full school years. The data from Fall 2016 through Spring 2017 was used for training our models. We then tested how well the models worked on new data from the following school year (Fall 2017 - Spring 2018). The information we used includes student **_demographics_**, **_academic details_**, **_when students visited_**, plus **_external data_** like weather and moon phases. We also kept in mind that the way the data was originally collected might have included more seniors than other classes.
 
 ## Methodological Framework
 
-Our preprocessing architecture implements systematic feature engineering across multiple domains:
+Our preprocessing architecture, implemented using the R `recipes` package, includes:
+- Creating new features across different areas (Temporal, Academic, Visit, Course, Student).
+- Transformation of raw features into informative derived features.
+- Handling of time variables, imputation of missing values, management of novel factor levels, dummy variable creation, and normalization.
 
-- Temporal component decomposition into hierarchical time scales
-- Academic context modeling with course-level hierarchies
-- Statistical standardization using **_RobustScaler_** methodology
+As part of exploratory analysis, K-means++ initialization was compared to standard K-means for a sample dataset, showing no clear advantage in that specific test.
 
-The modeling architecture employs:
-- **_PenalizedSplines_** as the primary architecture
-- Ridge and Lasso regression variants
-- KNN for local pattern capture
-- Penalized Log-Normal GLM for duration modeling
-- Specialized Poisson and Weibull architectures for occupancy forecasting
+The modeling architectures explored include:
+- Multivariate Adaptive Regression Splines (MARS)
+- Random Forest
+- XGBoost
+- Gated Recurrent Unit (GRU) networks
+- Multi-Layer Perceptron (MLP) networks
 
 ## Implementation Results
 
-- **Duration Prediction**: RMSE of 59.47 minutes (R² = 0.059)
-  - PenalizedSplines with optimized parameters
-  - Ridge α: 14.38
-  - Spline degree: 3
-  - Knot count: 15
-
-- **Occupancy Prediction**: RMSE of 3.64 students (R² = 0.303)
+- **Best Model**: XGBoost performed best on the holdout set for both tasks.
+- **Duration Prediction**: Holdout RMSE of 59.9 minutes (R² = 0.099)
+  - Performance further improved post-hoc using a weighted average (75% prediction, 25% training mean).
+  - Best XGBoost Parameters: Trees=75, Depth=21, LR=0.05, MinNode=15, Mtry=15.
+- **Occupancy Prediction**: Holdout RMSE of 1.83 students (R² = 0.911)
+  - Best XGBoost Parameters: Trees=450, Depth=8, LR=0.1, MinNode=2, Mtry=35.
 
 ## Technical Infrastructure
 
 The project utilizes:
-- Python scientific computing ecosystem
-- **_scikit-learn_** for core modeling
-- **_MLflow_** for experiment tracking
-- pandas and numpy for computation
-- matplotlib, seaborn, and plotly for visualization
-- Clay for notebook rendering
-- R for statistical analysis
-- Quarto for HTML generation
+- R for feature engineering (`recipes`, `lunar`, `openmeteo`) and statistical analysis.
+- Python scientific computing ecosystem for modeling (`scikit-learn`, `xgboost`, potentially `tensorflow`/`pytorch`).
+- **_MLflow_** for experiment tracking.
+- pandas and numpy for computation.
+- matplotlib, seaborn, and plotly for visualization.
+- LaTeX for presentation development (`beamer`).
+- Docker for containerized development environments.
 
 ### Project Structure
 
 The workbook is organized into several key sections:
 
 1. **Feature Engineering**
-   - Temporal Features (time decomposition, custom categories)
-   - Academic Context (course levels, GPA, student standing)
-   - Course & Major Analysis (keyword categorization, grouping)
-   - Usage Patterns (frequency, volume, group dynamics)
-   - Data Quality (duration/occupancy validation)
+   - Temporal Features (time of day, day of week, week, semester)
+   - Academic Context (course levels, GPA categories, credit load)
+   - Course & Major Analysis (subject areas, level progression, course mix)
+   - Student Characteristics (major groups, class standing, academic progress)
+   - Visit Patterns (duration patterns, group sizes, frequency)
+   - External Data (lunar phases, weather metrics)
 
 2. **Models & Pipelines**
-   - Cross-Validation (KFold, Rolling, Expanding windows)
-   - Algorithms (Ridge/Lasso, PenalizedSplines, KNN)
-   - Pipeline Variants (Vanilla, Interaction, Dimensionality Reduction)
+   - R `recipes` preprocessing pipeline.
+   - Cross-Validation (5-fold used for final model evaluation).
+   - Algorithms Explored (MARS, Random Forest, XGBoost, GRU, MLP).
 
 3. **Evaluation**
-   - Duration Model (RMSE: 59.47, R²: 0.059)
-   - Occupancy Model (RMSE: 3.64, R²: 0.303)
-   - Model Diagnostics (distributions, residuals)
-   - Technical Challenges & Comparisons
+   - Holdout Set Performance (RMSE, R²)
+   - Best Model: XGBoost
+   - Duration Model (RMSE: 59.9, R²: 0.099)
+   - Occupancy Model (RMSE: 1.83, R²: 0.911)
+   - Weighted average technique for duration.
+   - Model Diagnostics (distributions, residuals).
 
 4. **Predictions**
-   - Duration prediction analysis
-   - Occupancy forecasting results
+   - Analysis of predictions from the best models.
 
 5. **Appendix**
-   - Technical details
-   - Supplementary analyses
+   - K-means++ comparison.
+   - Technical details.
+   - Supplementary analyses.
 
-*Implementation details and comprehensive analysis available in the interactive workbook.*
+*Implementation details and comprehensive analysis available in the interactive workbook and presentation.*
 
 ## Getting Started
 
@@ -112,9 +114,9 @@ To work on this project, you'll need to install Docker and VSCode (or fork). Usi
 4. When VSCode opens, look for the "Open in Dev Container" popup in the bottom right. Alternatively, press `Ctrl + Shift + P`, type "Dev Containers: Open Folder in Container", and select the project folder.
 
 5. Choose your development environment:
-   - R container: For feature engineering and visualization
-   - Python container: For modeling and additional plotting
-   - LaTeX container: For presentation development
+   - R container: For feature engineering and visualization (`recipes`)
+   - Python container: For modeling (`xgboost`, deep learning) and additional plotting
+   - LaTeX container: For presentation development (`beamer`)
    - Clojure container: For notebook rendering
 
 The Dev Container will automatically:
@@ -131,20 +133,20 @@ Due to the project's limited duration, full automation of the workflow is not im
 
 1. **R Environment (Feature Engineering)**:
    - First, open the project in the R development container (described above)
-   - Run `src/r/feature_engineering.r` to generate the engineered feature CSVs
-   - This step is required before any model training
+   - Run `src/r/feature_engineering.r` to generate the engineered feature CSVs using the `recipes` package.
+   - This step is required before any model training.
 
 2. **Switch to Python Environment**:
-   - After feature engineering, you'll need to switch environments
-   - Press `Ctrl + Shift + P` and start typing "Reopen Locally" and select itß
-   - Press `Ctrl + Shift + P` again and start typing "Dev Containers: Reopen in Container" and select it
-   - Select the Python development environment
+   - After feature engineering, you'll need to switch environments.
+   - Press `Ctrl + Shift + P` and start typing "Reopen Locally" and select it.
+   - Press `Ctrl + Shift + P` again and start typing "Dev Containers: Reopen in Container" and select it.
+   - Select the Python development environment.
 
 3. **Model Training**:
-   - With the generated CSVs from step 1 (in `data/processed`)
-   - Navigate to `src/python/test_train`
-   - Run the training scripts to view model results logged in MLflow
-   - If MLflow did not open in your browser, you can open it on [`localhost:5000`](http://localhost:5000). Check it out, MLflow is a powerful tool
+   - With the generated CSVs from step 1 (in `data/processed`).
+   - Navigate to `src/python/test_train` (or relevant modeling scripts).
+   - Run the training scripts (e.g., for XGBoost, GRU, MLP) to view model results logged in MLflow.
+   - If MLflow did not open in your browser, you can open it on [`localhost:5000`](http://localhost:5000). Check it out, MLflow is a powerful tool.
 
 Note that this workflow requires manual environment switching due to the separate R and Python dependencies. But hopefully the process of bouncing back and forth between development environment and local will allow for deeper understanding of Docker, Dev Containers, and the project.
 
