@@ -12,8 +12,7 @@
 !data/raw/*
 !data/predictions/*
 *.rds
-# *.json
-*.pth
+artifacts/
 
 # Development environment
 *.db
@@ -22,10 +21,7 @@ mlruns/
 mlartifacts/
 results/
 
-models/final/
-
 # Language specific
-src/clojure/
 docs/
 Rplots.pdf
 *.pyc
@@ -51,10 +47,6 @@ Rplots.pdf
 *(busy)
 
 *.pdf
-!data_flow.pdf
-!model_building.pdf
-!Presentation.pdf
-!presentation/images/eda/dist_*
 
 xxx*
 prompts/
