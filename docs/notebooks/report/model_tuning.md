@@ -1,4 +1,4 @@
-# Model Tuning
+# Model Tuning Overview
 
 This document outlines the different modeling approaches and hyperparameter tuning strategies employed in this project. For details on the preprocessing steps applied before model training, please refer to the `preprocessing_pipelines.md` document.
 
@@ -117,7 +117,7 @@ This part of the pipeline leveraged the integrated tools within `tidymodels` for
 
 ### Python Framework (MLP, GRU)
 
-For neural networks, we shifted to Python and PyTorch, performing preprocessing steps as outlined in `preprocessing_pipelines.md`.
+For neural networks, we shifted to Python and PyTorch, performing preprocessing steps as outlined in the previous section, `Preproccessing Pipelines`.
 
 **Algorithms & Tuning:**
 
