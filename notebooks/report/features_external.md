@@ -10,7 +10,7 @@ Before adding external features, the script first combines the `train_engineered
 
 ## Moon Phase Features
 
-We (Jaryt) hypothesized (wanted to Jason to cringe) that lunar cycles might subtly influence activity patterns. To explore this, we used the R `lunar` package to calculate the moon phase for each `Check_In_Date`.
+We (Jaryt) hypothesized (wanted to make Jason cringe) that lunar cycles might subtly influence activity patterns. To explore this, we used the R `lunar` package to calculate the moon phase for each `Check_In_Date`.
 
 ```r
 # Relevant snippet from src/r/utils/create_data/external_data.R

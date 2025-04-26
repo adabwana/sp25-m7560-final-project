@@ -5,8 +5,7 @@
   (clay/make!
    {:format              [:quarto :html]
     :book                {:title "M7560: Final Project"}
-    :subdirs-to-sync     ["notebooks" "data"
-                          "presentation" "images" "presentation/images"]
+    :subdirs-to-sync     ["notebooks/report" "presentation/images"]
     :source-path         ["src/index.clj"
                           "notebooks/report/feature_engineering.md"
                           "notebooks/report/features_external.md"

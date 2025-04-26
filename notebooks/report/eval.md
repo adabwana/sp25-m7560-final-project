@@ -103,12 +103,4 @@ The visualization below compares direct occupancy prediction (blue), using XGBoo
 
 ![Occupancy Comparison Histogram](../../presentation/images/eval/imputed_vs_direct_occupancy.png)
 
-> **Insight**: Directly modeling the target variable of interest (Occupancy) proved much more effective than trying to infer it from predictions of a related but harder-to-predict variable (Duration). Our final XGBoost occupancy model significantly outperformed any imputed approaches considered.
-
-## Technical Challenges and Insights
-
-The process of developing these models highlighted several important technical aspects. Predicting individual visit `Duration` proved substantially more difficult than forecasting accumulated `Occupancy`, primarily due to the high variability and pronounced right-skewness inherent in the duration data. This characteristic makes the target challenging for standard regression models.
-
-Our exploration showed that for these specific prediction tasks, the XGBoost algorithm ultimately provided superior performance compared to simpler linear models (MARS), standard Random Forests, and the neural network architectures tested. This suggests that the non-linear relationships and feature interactions effectively captured by gradient boosting were crucial for maximizing predictive accuracy.
-
-Finally, the necessity of careful hyperparameter tuning through cross-validation became evident, as the performance of complex models like XGBoost can be quite sensitive to the chosen settings for parameters like tree depth, learning rate, and regularization.
+> **Insight**: Intuitively, directly modeling the target variable of interest (Occupancy) should prove much more effective than trying to infer it from predictions of a related but harder-to-predict variable (Duration). We still wonder whether our final XGBoost occupancy model would significantly outperformed any imputed approaches considered.
