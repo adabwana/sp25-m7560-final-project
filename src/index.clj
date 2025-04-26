@@ -34,7 +34,7 @@ This project develops predictive models for student usage patterns at the BGSU L
 
 ## Data Architecture
 
-The analysis uses LC visit data spanning two academic years. Models were trained on data from Fall 2016 - Spring 2017 and evaluated on a holdout set from Fall 2017 - Spring 2018. Features included student demographics, academic metrics (course load, GPA), temporal information (time of day, week of semester), and external data (weather, lunar phase). An observed bias towards senior-class representation in the data was noted.
+The analysis uses LC visit data spanning two academic years. Models were trained on data from Fall 2016 - Spring 2017. Our validation framework utilized a reserved portion of this 2016-2017 data as a holdout set to assess model generalization and stability. Features included student demographics, academic metrics (course load, GPA), temporal information (time of day, week of semester), and external data (weather, lunar phase). An observed bias towards senior-class representation in the data was noted.
 
 ## Methodological Framework
 
