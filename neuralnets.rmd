@@ -1,0 +1,181 @@
+---
+title: "Neural Networks"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+library(reticulate)
+```
+
+
+***
+
+# Neural Networks
+
+In addition to the XGBoost, MARS, and Random Forest models just discussed, we also wanted to explore how neural networks would perform on our two tasks. 
+
+In this section, we will construct a simple feedforward neural network in Python using the PyTorch library. As there are endless possible combinations of architectures paired with different hyperparameters, we will use 5 Fold cross validation to train/validate a subset of possible models. We also sampled a set of holdout test data to evaluate the overall performances of each model on data not seen during training.
+
+To avoid copying an overwhelming amount of python code in our report, we've only included simplified code chunks to showcase our model training and evaluation processes.
+
+*Note: In this section, we will not incorporate the post-hoc visit weighting scheme we implemented in the previous sections.* 
+
+
+
+## Model Definition 
+
+This code defines a class for a feedforward neural network model that consists of an input layer, one or more hiddnen layers, and an output layer. The number of and size of hidden layers, as well as activation functions and other hyperparameters, are all configurable.
+
+This setup allows us to customly define a search space of hyperparameters and architectures to loop through and test in our pipeline. I also included options for dropout layers and weight decay for regularization. Since the model is so flexible and complex, these regularization options could help prevent overfitting.
+
+The `dropout layer` randomly sets a fraction of the input units to 0 at each update during training, which helps prevent each neuron from becoming too reliant on any one input. 
+The `weight decay` parameter is used to apply L2 regularization to the weights of the model, which helps prevent overfiting by penalizing large weights.
+
+
+
+```{python, eval=FALSE}
+
+import torch
+import torch.nn as nn
+
+class SimpleNN(nn.Module):
+    def __init__(self, input_dim, hidden_dims, output_dim, activation='ReLU', dropout=0.0):
+        super(SimpleNN, self).__init__()
+        if isinstance(hidden_dims, int):
+            hidden_dims = [hidden_dims]
+        if isinstance(activation, str):
+            activations = [activation] * len(hidden_dims)
+        else:
+            activations = activation
+        layers = []
+        prev_dim = input_dim
+        for h_dim, act in zip(hidden_dims, activations):
+            layers.append(nn.Linear(prev_dim, h_dim))
+            act_layer = getattr(nn, act)() if hasattr(nn, act) else nn.ReLU()
+            layers.append(act_layer)
+            if dropout > 0.0:
+                layers.append(nn.Dropout(dropout))
+            prev_dim = h_dim
+        layers.append(nn.Linear(prev_dim, output_dim))
+        self.model = nn.Sequential(*layers)
+
+    def forward(self, x):
+        return self.model(x)
+
+```
+
+
+
+## Cross-Validation Loop
+
+Looping through each of the hyperparameters and architectures is computationally expensive, so I decided to convert our training data into a .parquet file for faster loading times. This significantly sped up the training process.
+
+In this code, we can also easily define the target as `Duration_In_Min` or `Occupancy` depending on which model we want to train. In a separate code chunk, I can change the name of the saved output file to reflect the target being trained/tested. 
+
+I also saved a houldout_indices.npy file for consistent holdout sampling and fair comparisons between models in the end.
+
+In the code below, the `search_space` variable is a dictionary that defines all the hyperparameters and their possible values to be tested.
+
+```{python, eval=FALSE}
+
+def main():
+    df = load_data('data/processed/train_engineered.parquet')
+    BASE_FEATURES_TO_DROP = [
+        'Student_IDs', 'Semester', 'Class_Standing', 'Major',
+        'Expected_Graduation', 'Course_Name', 'Course_Number',
+        'Course_Type', 'Course_Code_by_Thousands', 'Check_Out_Time',
+        'Session_Length_Category', 'Check_In_Date', 'Semester_Date',
+        'Expected_Graduation_Date',
+        'Duration_In_Min', 'Occupancy'
+    ]
+
+    target = 'Occupancy'
+
+    drop_cols = list(set(BASE_FEATURES_TO_DROP) - {target})
+    X, y = preprocess_data(df, target, drop_cols)
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+    holdout_indices_path = 'data/processed/holdout_indices.npy'
+    X_non_holdout, y_non_holdout, X_holdout, y_holdout = get_holdout_split(X_scaled, y, holdout_indices_path)
+
+    search_space = {
+        "n_layers": [1, 2, 3],
+        "n_units_l0": [12, 50, 100, 150],
+        "n_units_l1": [12, 50, 100],
+        "n_units_l2": [12, 50],
+        "activation": ["ReLU"],
+        "learning_rate": [0.01],
+        "batch_size": [2048],
+        "dropout": [0, 0.2, 0.3],
+        "weight_decay": [0, 1e-5, 1e-4]
+    }
+
+    # ... Loop through all combinations of hyperparameters ...
+
+    # ... Printing and saving results ...
+
+```
+
+
+## Holdout Evaluation
+
+After each of the model configurations were tested using 5 Fold cross-validation, each combination was also fit to all non-holdout data and used to predict the holdout data. Although we might usually only refit and test the best-performing model from cross-validation, I suspected the larger architectures would dominate during this process and risk overfitting. Thus, I included all the models so the simpler architectures would also have a chance. The results were saved to a .csv file for easy comparison and analysis.
+
+The following code is a simplified version of the retraining and evaluation process Where RMSE, MAE, and R2 metrics are calculated.
+
+
+
+```{python, eval=FALSE}
+
+def retrain_and_evaluate_on_holdout(best_params, X_non_holdout, y_non_holdout, X_holdout, y_holdout):
+
+    # ... verbose for debugging ...
+    # ... refit each model on the non-holdout data ...
+
+    model.eval()
+    preds, targets_list = [], []
+    with torch.no_grad():
+        for features, targets in val_loader:
+            features, targets = features.to(device), targets.to(device)
+            outputs = model(features)
+            preds.append(outputs.cpu().numpy())
+            targets_list.append(targets.cpu().numpy())
+    preds_concat = np.concatenate(preds, axis=0)
+    targets_concat = np.concatenate(targets_list, axis=0)
+    rmse = np.sqrt(mean_squared_error(targets_concat, preds_concat))
+    mae = np.mean(np.abs(targets_concat - preds_concat))
+    ss_res = np.sum((targets_concat - preds_concat) ** 2)
+    ss_tot = np.sum((targets_concat - np.mean(targets_concat)) ** 2)
+    r2 = 1 - ss_res / ss_tot if ss_tot > 0 else float('nan')
+    print(f"Holdout Results: RMSE={rmse:.4f} | MAE={mae:.4f} | R2={r2:.4f}")
+    return rmse, mae, r2
+
+```
+
+
+## Results
+
+The results of both the cross validation and holdout evaluations were surprisingly underwhelming. None of the model configurations seemed perform better than our previous XGBoost, MARS, or Random Forest models. So, they will not be used for our final predictions, but we will include two of the model configurations as part of our required 5 models for the project.
+
+Architectures, hyperparameters, and resulting RMSE scores can be seen in the table below.
+
+
+
+### **Duration Models**
+
+| Model Name      | # Layers | Hidden Units      | Activation(s) | Dropout | Weight Decay | CV RMSE   | Holdout RMSE |
+|:--------------- |:--------:|:-----------------:|:-------------:|:-------:|:------------:|:---------:|:------------:|
+| NeuralNet-1     |    3     | [100 > 50 > 50]   | ReLU          | 0.3     | 1e-4         | 59.67     | 62.02        |
+| NeuralNet-2     |    3     | [150 > 50 > 50]   | ReLU          | 0.3     | 1e-4         | 59.59     | 62.05        |
+
+
+### **Occupancy Models**
+
+| Model Name      | # Layers | Hidden Units      | Activation(s) | Dropout | Weight Decay | CV RMSE   | Holdout RMSE |
+|:--------------- |:--------:|:-----------------:|:-------------:|:-------:|:------------:|:---------:|:------------:|
+| NeuralNet-1     |    1     | [150]             | ReLU          | 0.2     | 1e-5         | 3.62      | 3.17         |
+| NeuralNet-2     |    1     | [100]             | ReLU          | 0.2     | 1e-4         | 3.67      | 3.23         |
+
+***
+

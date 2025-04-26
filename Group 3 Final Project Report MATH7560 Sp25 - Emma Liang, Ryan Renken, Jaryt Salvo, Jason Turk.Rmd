@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## MARS, Random Forests, and Boosting
 
-``` {r, echo = FALSE}
+``` {r, echo = FALSE, message = FALSE}
 # --- Load Libraries ---
 # Using suppressPackageStartupMessages to minimize console noise
 suppressPackageStartupMessages(library(here)) # For locating files relative to project root
@@ -62,20 +62,14 @@ MODEL_METRICS <- metric_set(rmse, rsq, mae)
 set.seed(SEED)
 
 # 1. Load Data
-cat(glue::glue("--- Loading Data ({DATA_FILENAME}) ---\n\n"))
 full_data <- load_data(DATA_FILENAME)
-cat(glue::glue("Full data rows: {nrow(full_data)}\n\n"))
 
 # 2. Split Data into Training and Testing
-cat(glue::glue("--- Splitting Data (Train: {TEST_SPLIT_PROP*100}%, Test: {(1-TEST_SPLIT_PROP)*100}%) ---\n\n"))
 data_split <- rsample::initial_split(full_data, prop = TEST_SPLIT_PROP, strata = NULL) # Add strata if needed
 train_data <- rsample::training(data_split)
 test_data <- rsample::testing(data_split)
-cat(glue::glue("Training data rows: {nrow(train_data)}, Test data rows: {nrow(test_data)}\n\n"))
 
 # 3. Create Recipe
-cat(glue::glue("--- Creating Recipe for Target: {TARGET_VARIABLE} ---\n\n"))
-# NOTE: FEATURES_TO_DROP list is now correctly defined above
 recipe_obj <- create_recipe(full_data, TARGET_VARIABLE, FEATURES_TO_DROP)
 #print(recipe_obj) # Print summary of recipe steps
 
@@ -454,7 +448,7 @@ w1 <- 3/4
 w2 <- 1/4
 predIDs$FINAL <- ifelse(is.nan(predIDs$adj), predIDs$.pred,
                            w1*predIDs$.pred + w2*predIDs$adj)
-write.csv(predIDs$FINAL, "../data/predictions/Duration_FINAL", row.names = F)
+write.csv(predIDs$FINAL, "data/predictions/Duration_FINAL", row.names = F)
 ```
 
 
@@ -630,7 +624,7 @@ stopCluster(cl)
 ``` {r}
 modpredsO <- read.csv(here::here("data/predictions/Occupancy_RandomForest_20250423155038_pred.csv"))
 colnames(modpredsO) <- "x"
-write.csv(modpredsO, "../data/predictions/Occupancy_FINAL", row.names = F)
+write.csv(modpredsO, "data/predictions/Occupancy_FINAL", row.names = F)
 ```
 
 # Part 3: Creating a K-Means++ Algorithm
@@ -677,7 +671,7 @@ find_kmeanspp_centers <- function(X, K){
 
 ``` {r}
 set.seed(7560)
-km <- read.csv("../k-means++/kmeans_dataset.csv")
+km <- read.csv("k-means++/kmeans_dataset.csv")
 kclust <- kmeans(km, centers = 11, nstart = 1)
 
 library(colorspace)
