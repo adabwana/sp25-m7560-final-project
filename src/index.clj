@@ -15,7 +15,7 @@
 ### Predicting Learning Commons Usage 
 
 <p align=\"center\">
-**Fall 2025 | Math 75650 Statistical Learning II | Date: " current-date "**
+**Spring 2025 | Math 75650 Statistical Learning II | Date: " current-date "**
 </p>
 
 **By:** Emma Naiyue Liang, Ryan Renken, Jaryt Salvo, & Jason Turk
@@ -44,7 +44,7 @@ For both prediction tasks (duration and occupancy), we evaluated several algorit
 
 ## Implementation Results
 
-Model performance was assessed on the holdout dataset (Fall 2017 - Spring 2018) using Root Mean Squared Error (RMSE) and R-squared (R²).
+Model performance was assessed on a dedicated holdout dataset (a reserved portion of the Fall 2016 - Spring 2017 data) using Root Mean Squared Error (RMSE) and R-squared (R²).
 
 - **Duration Prediction:** This proved challenging. The best model (XGBoost) achieved an RMSE of 59.9 minutes and an R² of 0.099. Performance was slightly improved by incorporating a weighted average with the training set mean duration.
 - **Occupancy Prediction:** This yielded substantially better results. The optimized XGBoost model achieved an RMSE of 1.83 students and an R² of 0.911, demonstrating strong predictive power.
