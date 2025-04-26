@@ -1,7 +1,0 @@
-format:
-  html: {toc: true, toc-depth: 3, theme: united, number-sections: false}
-  revealjs: {theme: solarized, navigation-mode: vertical, transition: slide, background-transition: fade, incremental: true}
-project: {type: book}
-book:
-  chapters: [index.qmd, notebooks/report/feature_engineering.md, notebooks/report/features_external.md, notebooks/report/preprocessing.md, notebooks/report/model_tuning.md, notebooks/report/neural_networks.md, notebooks/report/eval.md, notebooks/report/predictions.md, notebooks/report/kmeans.md]
-  title: 'M7560: Final Project'
