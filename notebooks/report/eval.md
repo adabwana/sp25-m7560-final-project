@@ -1,128 +1,114 @@
-# **Evaluation**
+# Evaluation
+
+This section details the performance of our final selected models on the holdout dataset (the 25% of `LC_train` reserved before cross-validation).
 
 ## Best Model Configurations
+
+After tuning MARS, Random Forest, XGBoost, MLP, and GRU models using 5-fold cross-validation, XGBoost emerged as the top performer for both prediction tasks.
 
 <table width="100%">
 <tr>
 <td width="50%" valign="top" style="padding-right: 20px; border-right: 2px solid #ccc;">
 
-### Duration Model
+### Duration Model (Best on Holdout)
 
 | Component | Configuration |
 |-----------|--------------|
-| Model | **_PenalizedSplines_** |
-| Pipeline | **_vanilla_** |
-| CV Method | **_kfold_** |
-| Ridge α | `14.38` |
-| Spline knots | `15` |
-| Scaler | **_RobustScaler_** |
-| RMSE | `59.47` |
-| R² | `0.059` |
+| Model | **XGBoost** |
+| CV Method | 5-fold |
+| Trees | `75` |
+| Tree Depth | `21` |
+| Learning Rate | `0.05` |
+| Min Node Size | `15` |
+| Variables Tried (mtry) | `15` |
+| Holdout RMSE | `59.9` |
+| Holdout R² | `0.099` |
 
 </td>
 <td width="50%" valign="top" style="padding-left: 20px;">
 
-### Occupancy Model
+### Occupancy Model (Best on Holdout)
 
 | Component | Configuration |
 |-----------|--------------|
-| Model | **_PenalizedSplines_** |
-| Pipeline | **_vanilla_** |
-| CV Method | **_rolling_** |
-| Ridge α | `29.76` |
-| Spline knots | `15` |
-| Scaler | **_RobustScaler_** |
-| RMSE | `3.64` |
-| R² | `0.303` |
+| Model | **XGBoost** |
+| CV Method | 5-fold |
+| Trees | `450` |
+| Tree Depth | `8` |
+| Learning Rate | `0.1` |
+| Min Node Size | `2` |
+| Variables Tried (mtry) | `35` |
+| Holdout RMSE | `1.83` |
+| Holdout R² | `0.911` |
 
 </td>
 </tr>
 </table>
 
-For predicting the `Duration` target variable, we implemented a **_Penalized Cubic Spline model_** with 15 knots. Despite extensive testing of various approaches, including **_feature interactions_** and **_compression techniques_**, the vanilla pipeline consistently outperformed more complex alternatives. Notably, **_temporal cross-validation_** showed no meaningful advantage over the random KFold method. After thorough hyperparameter optimization, we determined the optimal Ridge penalty to be `14.38`.
+For predicting visit `Duration`, the optimized **XGBoost model** achieved the lowest Root Mean Squared Error (RMSE) on the holdout set compared to the other algorithms tested. The key hyperparameters identified through cross-validation tuning were 75 trees, a maximum tree depth of 21, a learning rate of 0.05, a minimum node size of 15, and sampling 15 variables at each split.
 
-Note: While this model achieved the **_lowest RMSE_** among all tested approaches, its low R² value of `0.059` indicates a **_significant limitation_** in explaining the variance in the response variable.
+However, the resulting R² value of **0.099** is quite low, indicating that even the best model struggled significantly to explain the variance in individual visit durations. As noted in the presentation, we found that applying a **post-hoc weighted average** (blending the model's prediction with the overall mean training duration) slightly improved practical performance, though the fundamental challenge of predicting this noisy target remains.
 
-The `Occupancy` prediction results proved more encouraging. Using another **_Penalized Cubic Spline model_** with 15 knots, we found that **_rolling cross-validation_** provided superior results compared to other methods. Through systematic tuning, we identified an optimal Ridge penalty of `29.76`. The resulting R² value of `0.303`, while modest, represents a **_meaningful improvement_** over the Duration model and suggests better capture of the underlying patterns in the data.
+The `Occupancy` prediction task yielded much more successful results. Again, **XGBoost** provided the best performance on the holdout data. The optimal configuration used 450 trees, a maximum depth of 8, a learning rate of 0.1, a minimum node size of 2, and sampled 35 variables per split. This model achieved an RMSE of **1.83 students** and a strong R² value of **0.911**, demonstrating its ability to effectively capture the patterns driving building occupancy based on check-in data.
 
 ## Model Diagnostics
 
-### Duration Model Performance
+*(Note: The diagnostic plots shown here are from the final presentation and reflect the performance of the best XGBoost models on the holdout set.)*
 
-The diagnostic plots below visually evaluate the performance of the model in predicting the `Duration` response variable. As noted earlier, the model struggles to explain the variance in the response. These plots compare actual and predicted values and provide insights into the residuals.
+### Duration Model Performance (XGBoost)
 
-In the first scatter plot, the model's predictions are **_capped off just under roughly 150_**, leading to a horizontal cluster of points. This consistent **_underestimation of larger responses_** is further reflected in the residual histogram, which has an extended left tail, and the residual QQ plot, where many negative residuals deviate significantly below the normal reference line. Additionally, the residual plot reveals **_non-constant variance_** and a distinct pattern, indicating that the model fails to capture the true underlying structure of the data.
+The diagnostic plots for the best duration model (XGBoost) highlight the difficulties encountered. While better than simpler models explored earlier, the R² of ~0.1 signifies substantial unexplained variance.
 
-![Duration Model Diagnostics](../../presentation/images/evaluation/Duration_PenalizedSplines_vanilla_kfold.jpg)
+![Duration Model Diagnostics](../../presentation/images/eval/holdout_diagnostics_duration.png)
 
-> **Summary:** The duration prediction task proved particularly challenging, with models struggling to capture the full range of visit durations. The low R² value reflects the **_inherent complexity_** of predicting individual study session lengths. Our models consistently produced a **_compressed prediction range_**, systematically underestimating visits longer than `150` minutes while overestimating very short durations. This behavior suggests that additional features or alternative modeling approaches may be necessary to capture the full spectrum of study patterns.
+- **Predicted vs. Actual**: Shows significant scatter and a tendency for the model to predict within a narrower range than the true values, particularly struggling with very long durations.
+- **Residuals vs. Predicted**: Ideally shows no pattern, but here we see variance increase with predicted value (heteroscedasticity) especially from around 45 to 120 in our predicted values, indicating model misspecification.
+- **Residual Histogram/QQ Plot**: These plots deviate from normality, especially in the tails, reflecting the model's difficulty with the right skewed nature of duration data and extreme values.
 
+> **Summary:** Predicting individual visit duration remains challenging. The XGBoost model, while the best performer among those tested, still only explains about 10% of the variance (R² ≈ 0.1). The diagnostics show limitations in capturing the full range and variability of visit lengths, potentially due to inherent randomness in individual behavior or missing predictive factors (e.g., specific purpose of visit).
 
-### Occupancy Model Performance
+### Occupancy Model Performance (XGBoost)
 
-The **_Occupancy model_** diagnostics reveal more promising results. The scatter plots exhibit a distinct **_grid-like pattern_** due to the integer nature of both the response variable and the model's predictions. Areas where multiple points share the same value appear as darker shades of blue in the scatter plots.
+The **Occupancy model** diagnostics show a much better fit, consistent with the high R² value.
 
-Consistent with the improved R² observed for this model, the diagnostic plots reflect a **_better overall fit_** compared to the Duration model. Although a slight pattern is still visible in the residual plot, it is evident that this model aligns more closely with the underlying data for this problem.
+![Occupancy Model Diagnostics](../../presentation/images/eval/holdout_diagnostics_occupancy.png)
 
-![Occupancy Model Diagnostics](../../presentation/images/evaluation/Occupancy_PenalizedSplines_vanilla_rolling.jpg)
+- **Predicted vs. Actual**: Shows points clustering much more closely around the ideal 45-degree line, indicating good agreement between predictions and actual occupancy counts. The integer nature of the data is visible.
+- **Residuals vs. Predicted**: While perhaps not perfectly random, the pattern is much less pronounced than for the duration model, suggesting the model captures the primary drivers of occupancy well.
+- **Residual Histogram/QQ Plot**: Appear much closer to a normal distribution compared to the duration residuals, although some significant deviations occur at the extremes (very low and very high occupancy).
 
-> **Summary:** The occupancy prediction models demonstrated substantially better performance, particularly in capturing **_typical usage patterns_**. The models showed strongest accuracy in the **_modal range of 10-15 occupants_**, where most observations occur. While the overall distribution of predictions closely matched observed patterns, we observed minor discrepancies at the distribution tails, particularly during **_extremely busy or quiet periods_**. The superior R² value suggests that occupancy patterns follow more predictable trends than individual visit durations.
+> **Summary:** The XGBoost model for occupancy prediction performed remarkably well (R² ≈ 0.91). Diagnostics confirm a strong fit, even for high values. The model effectively learned the relationship between the input features (time, student demographics, academic context, etc.) and the number of students currently in the Learning Commons.
 
 ## Distribution Analysis
 
+*(Note: The distribution plots shown here are from the final presentation.)*
+
 ### Predicted vs. Actual Distributions
 
-To further evaluate the predictive performance of our models, we overlaid the distribution of predicted values onto histograms of the actual values. These plots provide a clearer depiction of how well our predictions align with the actual data. In both cases, the models appear to consistently **_overshoot the bulk of the observations_**. We suspect this overestimation is driven by the presence of **_extreme high values_** in the dataset, which the models struggled to accurately predict.
+Comparing the distributions of predicted versus actual values provides further insight.
 
-This challenge likely contributes to the relatively **_high RMSE_** for our `Duration` model. Large errors on these extreme values significantly inflate the RMSE, as it averages the squared differences across all predictions.
+![Distribution Comparisons Duration](../../presentation/images/eval/duration_distribution.png)
 
-![Distribution Comparisons](../../presentation/images/evaluation/distribution_comparisons.jpg)
+- **Duration**: The predicted distribution (blue) for the XGBoost duration model is still more concentrated than the actual distribution (red), reflecting the difficulty in predicting the long tail of very long visits (R² ≈ 0.1). While potentially better than simpler models from last semester, it doesn't fully capture the observed spread.
 
-The distribution comparisons above reveal distinct patterns for each response variable. For Duration (left panel), the predicted distribution (blue) exhibits **_notably less spread_** than the actual values (gray), with a pronounced peak near the mean. This compression of the predicted range manifests in consistent **_underestimation of extreme durations_**, particularly evident in the model's inability to capture values beyond `150` minutes. These limitations align with our earlier observations of the model's **_low R² (`0.059`)_** and **_elevated RMSE (`59.47`)_**.
+![Distribution Comparisons Occupancy](../../presentation/images/eval/occupancy_distribution.png)
 
-The Occupancy predictions (right panel) show **_more promising results_**. The predicted distribution more faithfully reproduces the actual data's shape, particularly in the **_modal range of 10-15 occupants_**. However, some discrepancies persist at the extremes, with slight underestimation of low occupancy values and incomplete capture of the upper range. These characteristics explain the **_moderate R² value of `0.303`_**, suggesting our model captures meaningful but incomplete patterns in the occupancy data.
+- **Occupancy**: The predicted distribution aligns interestingly with the actual occupancy counts. While the model performs with a high R² (≈ 0.91), the shape and central tendency of the observed data sits some 2 occupants *lower* than the mean and median at a much higher density, $\sim 2 \times$. This contrasts to our last semester's prediction curve which centered about 1.5 mean occupants *higher* than the training distribution.
 
-### Comparison of Prediction Methods
+### Comparison of Prediction Methods (Occupancy)
 
-The visualization below compares two distinct approaches to occupancy prediction: **_direct modeling_** using Penalized Splines and **_imputation based on Duration predictions_**. The imputation method estimates occupancy as a derived variable from Duration predictions, while our primary model targets occupancy directly through Penalized Splines optimization.
+*(Note: The presentation included a plot comparing imputed vs. direct occupancy predictions.)*
 
-This comparison reveals **_notable distributional differences_**. The direct modeling approach (shown in blue) demonstrates **_superior alignment_** with actual occupancy patterns, particularly in capturing the characteristic peak at 10-15 occupants. In contrast, the imputed predictions (shown in red) produce a **_more diffuse distribution_** with extended tails, suggesting systematic overestimation of extreme occupancy values. We attribute this overestimation to **_error propagation_** from the underlying Duration predictions.
+The visualization below compares direct occupancy prediction (blue), using XGBoost, against an indirect method (red), viz. imputing occupancy based on the XGBoost duration predictions. Direct modeling typically yields better results as it avoids propagating errors from an intermediate prediction step. However, based on the plot, one might think that the imputed curve (red) better aligns with the training occupancy distribution. This observation was noted last semester as well.
 
-These results underscore a critical methodological insight: while imputation offers a practical alternative when direct measurements are unavailable, it introduces **_additional uncertainty_** compared to models trained explicitly on the target variable. The superior performance of our direct **_Penalized Splines approach_** validates our decision to prioritize dedicated occupancy modeling.
+![Occupancy Comparison Histogram](../../presentation/images/eval/imputed_vs_direct_occupancy.png)
 
-![Occupancy Comparison Histogram](../../presentation/images/evaluation/occupancy_comparison_histogram.jpg)
+> **Insight**: Directly modeling the target variable of interest (Occupancy) proved much more effective than trying to infer it from predictions of a related but harder-to-predict variable (Duration). Our final XGBoost occupancy model significantly outperformed any imputed approaches considered.
 
 ## Technical Challenges and Insights
 
-Our modeling process revealed several key technical challenges that influenced our approach and results:
+The process of developing these models highlighted several important technical aspects. Predicting individual visit `Duration` proved substantially more difficult than forecasting accumulated `Occupancy`, primarily due to the high variability and pronounced right-skewness inherent in the duration data. This characteristic makes the target challenging for standard regression models.
 
-### Distribution Complexity
-The underlying distributions of our target variables presented significant modeling challenges. `Duration` data exhibited strong **_right-skew characteristics_**, requiring careful consideration of transformation approaches. While **_log-normal transformations_** improved model training stability, they introduced complications in error interpretation on the original scale. The discrete nature of occupancy counts necessitated specialized handling, leading to our implementation of the `RoundedRegressor` wrapper to maintain prediction integrity.
+Our exploration showed that for these specific prediction tasks, the XGBoost algorithm ultimately provided superior performance compared to simpler linear models (MARS), standard Random Forests, and the neural network architectures tested. This suggests that the non-linear relationships and feature interactions effectively captured by gradient boosting were crucial for maximizing predictive accuracy.
 
-### Model Architecture Considerations
-Our systematic evaluation of model architectures yielded an unexpected insight: the **_vanilla pipeline_** consistently outperformed more sophisticated approaches. This finding suggests that:
-
-1. The relationship between our features and targets may be more **_direct than initially hypothesized_**
-2. The additional complexity of **_interaction terms_** and **_dimensionality reduction_** might be introducing noise rather than capturing meaningful patterns
-3. The superior performance of simpler architectures indicates that careful **_feature engineering_** may be more valuable than architectural sophistication
-
-### Temporal Pattern Significance
-The impact of temporal patterns emerged as a crucial factor, particularly in occupancy prediction. **_Rolling cross-validation_** consistently outperformed static approaches, suggesting that:
-
-- Recent historical patterns carry strong **_predictive power_**
-- The relationship between features and occupancy **_evolves over time_**
-- Traditional **_k-fold validation_** may underestimate model performance in practical applications
-
-These insights have shaped our recommendations for future work and system deployment.
-
-## Conclusions
-
-### Key Findings
-
-Our analysis demonstrates that **_Penalized Cubic Spline models_** delivered the strongest performance for both `Duration` and `Occupancy` predictions. We are particularly satisfied with the **_Occupancy model's capabilities_** and look forward to benchmarking it against our peers' approaches.
-
-### Future Directions
-
-This project's scope was necessarily limited to the provided features. We believe incorporating **_external variables_** could substantially improve model performance. For instance, the timestamp data suggests an opportunity to integrate **_weather conditions_**, which likely influence Learning Commons usage patterns.
-
-Additionally, while the models covered in this course offered valuable insights, alternative approaches such as **_tree-based methods_** or **_neural networks_** might better capture the complex non-linear relationships we observed. Given the clear **_temporal dependencies_** in our target variables, time series modeling presents another promising avenue for investigation.
+Finally, the necessity of careful hyperparameter tuning through cross-validation became evident, as the performance of complex models like XGBoost can be quite sensitive to the chosen settings for parameters like tree depth, learning rate, and regularization.

@@ -1,130 +1,111 @@
 # Predictions
 
-This chapter details our approach to deploying the final production models. Our prediction framework serves three key objectives:
+This chapter describes the process used to train the final models on the complete training dataset and generate predictions for the unlabeled test dataset (`LC_test`). This workflow leverages the best model configurations identified during the cross-validation and evaluation phases (detailed in `evaluation.md`).
 
-1. **Model Deployment**: Retrain best configurations on complete training dataset
-2. **Feature Consistency**: Ensure alignment between training and prediction features
-3. **Output Generation**: Produce and validate final predictions
+The process is managed by two primary R scripts:
 
-The core prediction code resides in [`src/python/predictions/final_models.py`](https://github.com/adabwana/f24-m7550-final-project/blob/master/src/python/predictions/final_models.py), implementing separate prediction pipelines for duration and occupancy tasks.
+1.  [`scripts/train_final_model.R`](https://github.com/adabwana/sp25-m7560-final-project/blob/master/scripts/train_final_model.R): Trains the chosen best model on the *entire* `LC_train` dataset (Fall 2016-Spring 2017) using the optimal hyperparameters found previously, and saves the final fitted model object.
+2.  [`scripts/predict_on_test.R`](https://github.com/adabwana/sp25-m7560-final-project/blob/master/scripts/predict_on_test.R): Loads the final trained model, loads the `LC_test` dataset (Fall 2017-Spring 2018), applies the model to generate predictions, performs any necessary post-processing, and saves the predictions.
 
-## Configuration Management
+## Final Model Training (`train_final_model.R`)
 
-Our framework begins by loading the optimal model configurations identified during evaluation:
+This script ensures the final production model utilizes all available labeled data for maximum performance.
 
-```python
-def load_model_config(model_type):
-    """Load the best model configuration from JSON."""
-    json_path = f"results/best_models/{model_type}_best_model.json"
-    with open(json_path, 'r') as f:
-        return json.load(f)
-```
+1.  **Identify Best Configuration**: The script first searches the model artifacts directory (`artifacts/models/r/`) to find the files corresponding to the best performing model for the specified `TARGET_VARIABLE` (e.g., "Occupancy") based on the primary tuning metric (`TUNING_METRIC`, e.g., "rmse"). It extracts the model type (e.g., "XGBoost") and loads the best hyperparameter set (`_best_params.rds`).
 
-These configurations capture the winning combinations of model architecture, pipeline variant, and cross-validation strategy from our evaluation phase.
+    ```r
+    # Conceptual logic from train_final_model.R
+    best_model_files <- find_best_model_files(TARGET_VARIABLE, TUNING_METRIC)
+    best_params <- readRDS(best_model_files$params_file)
+    model_type <- best_model_files$model_type
+    ```
 
-## Production Model Training
+2.  **Load Full Training Data**: It loads the complete `train_engineered.csv` dataset.
 
-We implement the final training phase using the complete training dataset:
+    ```r
+    # Conceptual logic from train_final_model.R
+    full_data <- load_data(DATA_FILENAME) # Loads LC_train
+    ```
 
-```python
-def train_model(model_type):
-    """Train and save a model based on type (duration or occupancy)."""
-    config = load_model_config(model_type)
-    train_df = pd.read_csv(f'{project_root}/data/processed/train_engineered.csv')
-    X_train, y_train = prepare_data(train_df, target_var, features_to_drop)
-    
-    pipeline = create_penalized_splines_pipeline(config['parameters'], model_type)
-    pipeline.fit(X_train, y_train)
-```
+3.  **Rebuild Workflow**: The script rebuilds the `tidymodels` workflow:
+    *   Creates the preprocessing `recipe` using the full training data (`create_recipe` from `src/r/recipes/recipes.R`).
+    *   Gets the appropriate `parsnip` model specification for the best `model_type` (e.g., `xgb_spec` from `src/r/models/models.R`).
+    *   Combines the recipe and model spec into a `workflow` object.
+    *   Finalizes the workflow using the loaded `best_params`.
 
-This approach maximizes model performance by utilizing all available training data while maintaining the validated configurations.
+    ```r
+    # Conceptual logic from train_final_model.R
+    recipe_obj <- create_recipe(full_data, TARGET_VARIABLE, FEATURES_TO_DROP)
+    model_spec <- model_list_to_use[[model_type]]$spec # Get spec based on type
+    workflow_obj <- build_workflow(recipe_obj, model_spec)
+    final_workflow <- finalize_workflow(workflow_obj, best_params)
+    ```
 
-## Pipeline Implementation
+4.  **Fit Final Model**: The finalized workflow is trained (`fit()`) using the entire `full_data`.
 
-We reconstruct the optimal pipeline configurations for each prediction task:
+    ```r
+    # Conceptual logic from train_final_model.R
+    final_fit <- fit(final_workflow, data = full_data)
+    ```
 
-```python
-def create_penalized_splines_pipeline(params, model_type='duration'):
-    """Create pipeline with parameters from best model."""
-    spline = SplineTransformer(degree=degree, n_knots=n_knots)
-    ridge = Ridge(alpha=alpha)
-    scaler = RobustScaler()
-    
-    base_pipeline = Pipeline([
-        ('scaler', scaler),
-        ('spline', spline),
-        ('ridge', ridge)
-    ])
-```
+5.  **Save Model**: The final fitted workflow object (`final_fit`) is saved to the artifacts directory with a timestamp and model type identifier. A copy is also saved with a `_latest.rds` suffix for easy access by the prediction script.
 
-The implementation maintains task-specific requirements:
-- Duration models use vanilla pipelines with optimized splines
-- Occupancy models incorporate RoundedRegressor for count constraints
+    ```r
+    # Conceptual logic from train_final_model.R
+    final_model_path <- file.path(MODEL_DIR, final_model_filename)
+    saveRDS(final_fit, final_model_path)
+    # ... code to create/update _latest.rds symlink/copy ...
+    ```
 
-## Feature Alignment
+## Prediction Generation (`predict_on_test.R`)
 
-We ensure consistent feature processing between training and prediction:
+This script handles the application of the trained model to new, unlabeled data.
 
-```python
-def align_features_with_model(X_test, model):
-    """Align test features with model's expected features."""
-    model_features = model.named_steps['scaler'].feature_names_in_
-    
-    missing_features = set(model_features) - set(X_test.columns)
-    extra_features = set(X_test.columns) - set(model_features)
-    return X_test.reindex(columns=model_features)
-```
+1.  **Load Final Model**: It locates and loads the appropriate final fitted model object (preferring the `_latest.rds` version) for the specified `TARGET_PREDICTION`.
 
-This alignment prevents feature mismatch issues during prediction on `LC_test`.
+    ```r
+    # Conceptual logic from predict_on_test.R
+    # ... logic to find model_path for _latest.rds or timestamped .rds ...
+    best_model_object <- readRDS(model_path)
+    ```
 
-## Prediction Generation
+2.  **Load Test Data**: The script loads the `test_engineered.csv` dataset, which contains the features for the prediction period (Fall 2017-Spring 2018) but no target variable values.
 
-We implement task-specific prediction protocols:
+    ```r
+    # Conceptual logic from predict_on_test.R
+    test_data <- readr::read_csv(TEST_DATA_PATH, show_col_types = FALSE)
+    ```
 
-```python
-def main():
-    """Generate predictions on test data."""
-    X_test, _ = prepare_data(test_df, target, features_to_drop)
-    final_model = mlflow.sklearn.load_model(model_path)
-    X_test = align_features_with_model(X_test, final_model)
-    
-    # Task-specific prediction constraints
-    if model_type == 'duration':
-        predictions = np.maximum(final_model.predict(X_test), 1)
-    else:  # occupancy
-        predictions = np.round(np.maximum(
-            final_model.predict(X_test), 1
-        )).astype(int)
-```
+3.  **Generate Predictions**: The `predict()` function is called on the loaded model object with the `test_data`. The `tidymodels` workflow automatically applies the same preprocessing steps (defined in the recipe embedded within the fitted workflow) to the test data before feeding it to the underlying model engine (e.g., XGBoost).
 
-Each task maintains its specific constraints:
-- Duration predictions enforce positive values
-- Occupancy predictions implement integer rounding
+    ```r
+    # Conceptual logic from predict_on_test.R
+    # Assumes make_predictions uses predict() internally
+    predictions_df <- predict(best_model_object, new_data = test_data)
+    # Renames default .pred column if needed by make_predictions
+    ```
 
-## Results Management
+4.  **Post-process Predictions**: Task-specific adjustments are made. For `Occupancy` predictions, values are rounded to the nearest integer and floored at a minimum of 1 (since occupancy cannot be less than 1).
 
-We maintain systematic organization of prediction outputs:
-
-```python
-def save_predictions(predictions, model_type):
-    """Save predictions with appropriate formatting."""
-    output_path = f'results/predictions/{model_type}_predictions.csv'
-    test_df[f'Predicted_{model_type.title()}'] = predictions
-    test_df.to_csv(output_path, index=False)
-    
-    # Generate summary statistics
-    summary_stats = {
-        'mean': predictions.mean(),
-        'std': predictions.std(),
-        'min': predictions.min(),
-        'max': predictions.max()
+    ```r
+    # Conceptual logic from predict_on_test.R
+    if (TARGET_PREDICTION == "Occupancy") {
+      predictions_df <- predictions_df %>%
+        mutate(
+          .pred = round(.pred),
+          .pred = pmax(1, .pred) # Ensure minimum of 1
+        )
     }
-    return summary_stats
-```
+    ```
 
-This approach ensures:
-- Consistent output formatting
-- Validation through summary statistics
-- Clear organization of prediction files
+5.  **Save Predictions**: The resulting predictions are saved to a CSV file in the `data/predictions/` directory, named convention includes the target variable, model type, and timestamp.
 
-These components work together to provide a robust prediction pipeline that maintains the methodological rigor established during model selection while maximizing prediction accuracy through full training data utilization.
+    ```r
+    # Conceptual logic from predict_on_test.R
+    output_df <- predictions_df %>%
+      mutate(.pred = round(.pred, digits = 4))
+    # ... logic to generate output_path ...
+    readr::write_csv(output_df, output_path)
+    ```
+
+This R-based pipeline ensures that the final model is trained optimally on all available labeled data and that predictions are generated consistently using the same preprocessing steps learned during training.

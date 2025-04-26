@@ -25,7 +25,7 @@
             }
         }
     },
-    "forwardPorts": [],
+    "forwardPorts": [1971],
     // User configuration
     "remoteUser": "vscode",
     "updateRemoteUserUID": true,
